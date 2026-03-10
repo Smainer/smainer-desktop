@@ -1,0 +1,101 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0",
+  "productName": "Smainer",
+  "version": "0.1.0",
+  "identifier": "com.smainer.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev:frontend",
+    "beforeBuildCommand": "npm run build:frontend"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Smainer",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "maximized": false,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "center": true,
+        "transparent": false,
+        "shadow": true,
+        "theme": "auto",
+        "titleBarStyle": "default"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-eval' https:; connect-src 'self' ws: wss: https: http://localhost:8000;"
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {
+        "language": ["en-US"],
+        "template": null,
+        "fragmentPaths": [],
+        "componentGroupRefs": [],
+        "componentRefs": [],
+        "featureGroupRefs": [],
+        "featureRefs": [],
+        "mergeRefs": []
+      },
+      "nsis": null
+    },
+    "publisher": "Smainer Team",
+    "copyright": "Copyright © 2026 Smainer Team",
+    "category": "DeveloperTool",
+    "shortDescription": "Windows provider node onboarding application",
+    "longDescription": "A desktop application to easily set up and manage Smainer provider nodes on Windows systems"
+  },
+  "plugins": {
+    "fs": {
+      "scope": {
+        "allow": [
+          "$APPDATA/smainer/*",
+          "$LOCALDATA/smainer/*"
+        ],
+        "deny": ["**"]
+      }
+    },
+    "shell": {
+      "scope": {
+        "allow": [
+          {
+            "name": "provider-daemon",
+            "cmd": "smainer-provider",
+            "args": ["start", "stop", "status", "--config", "*"]
+          }
+        ]
+      }
+    },
+    "process": {
+      "exitOnAllWindowsClosed": false
+    },
+    "window-state": {}
+  }
+}

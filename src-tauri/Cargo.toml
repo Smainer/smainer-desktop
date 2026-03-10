@@ -1,0 +1,59 @@
+[package]
+name = "smainer-desktop"
+version = "0.1.0"
+description = "Smainer Windows provider node onboarding desktop application"
+authors = ["Smainer Team <team@smainer.com>"]
+license = "MIT"
+repository = "https://github.com/smainer/smainer-desktop"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["protocol-asset", "shell-sidecar", "tray-icon"] }
+tauri-plugin-fs = "2.0"
+tauri-plugin-os = "2.0"
+tauri-plugin-process = "2.0"
+tauri-plugin-shell = "2.0"
+tauri-plugin-window-state = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+anyhow = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+dirs = "5.0"
+ring = "0.17"
+base64 = "0.22"
+hex = "0.4"
+rand = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+windows = { version = "0.52", features = [
+    "Win32_System_Registry",
+    "Win32_Foundation",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_System_Com",
+    "Win32_System_SystemInformation"
+] }
+
+[target."cfg(windows)".dependencies]
+winreg = "0.52"
+wmi = "0.13"
+
+[features]
+# By default, Tauri runs in production mode when `tauri build` is ran
+# If you need to use the dev server in production, remove the "custom-protocol" feature here
+default = ["custom-protocol"]
+# The custom-protocol feature makes Tauri use a custom protocol to serve the frontend assets
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
