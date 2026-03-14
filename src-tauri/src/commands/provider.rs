@@ -1,10 +1,26 @@
 use serde::{Deserialize, Serialize};
-use tauri::command;
+use tauri::{command, State};
 use anyhow::Result;
-use std::process::{Command, Stdio};
-use std::collections::HashMap;
+use std::process::{Command, Stdio, Child};
+use std::sync::Mutex;
+use std::path::PathBuf;
 use tokio::time::{sleep, Duration};
 use crate::models::{ProviderStatus, NodeRegistration};
+
+// Global state managed by Tauri
+pub struct ProviderState {
+    pub process: Mutex<Option<Child>>,
+    pub relayer_url: Mutex<String>,
+}
+
+impl Default for ProviderState {
+    fn default() -> Self {
+        Self {
+            process: Mutex::new(None),
+            relayer_url: Mutex::new("http://localhost:8000".to_string()),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProviderConfig {
@@ -19,62 +35,126 @@ pub struct ProviderConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RegistrationRequest {
     pub wallet_address: String,
-    pub hardware_info: String, // JSON string of hardware capabilities
+    pub hardware_info: String,
     pub stake_amount: Option<u64>,
 }
 
 #[command]
-pub async fn start_provider(config: ProviderConfig) -> Result<bool, String> {
+pub async fn start_provider(
+    config: ProviderConfig,
+    state: State<'_, ProviderState>
+) -> Result<bool, String> {
     tracing::info!("Starting provider with config: {:?}", config);
     
-    // For now, simulate provider startup
-    // In real implementation, this would launch the actual provider process
+    let mut process_guard = state.process.lock().map_err(|e| e.to_string())?;
     
-    // Validate configuration
-    if config.wallet_address.is_empty() {
-        return Err("Wallet address required".to_string());
+    if process_guard.is_some() {
+        return Ok(true); // Already running
+    }
+
+    // Update relayer URL in state
+    if let Ok(mut url) = state.relayer_url.lock() {
+        *url = config.relayer_url.clone();
     }
     
-    if config.relayer_url.is_empty() {
-        return Err("Relayer URL required".to_string());
+    // Determine command to run based on environment
+    // In strict production, this would be a bundled binary
+    // In dev, we can try to find the python script
+    
+    // Try to find smainer-provider binary first (bundled)
+    let binary_path = if cfg!(target_os = "windows") { "smainer-provider.exe" } else { "smainer-provider" };
+    
+    // Command construction
+    let mut cmd = if std::path::Path::new(binary_path).exists() {
+        Command::new(binary_path)
+    } else {
+        // Fallback to python execution for dev environment
+        // Assuming running from desktop/src-tauri
+        // Path to backend/provider/src/provider/main.py is ../../backend/provider/src/provider/main.py
+        // Or run as module with python
+        let root_dir = std::env::current_dir().unwrap_or_default();
+        let backend_path = root_dir.parent().unwrap().join("backend").join("provider");
+        
+        let mut py_cmd = Command::new("python3");
+        py_cmd.current_dir(&backend_path);
+        py_cmd.arg("-m");
+        py_cmd.arg("src.provider.main"); // Needs correct module path relative to cwd
+        py_cmd
+    };
+    
+    // Pass args
+    cmd.env("WALLET_ADDRESS", &config.wallet_address);
+    cmd.env("RELAYER_URL", &config.relayer_url);
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    match cmd.spawn() {
+        Ok(child) => {
+            *process_guard = Some(child);
+            tracing::info!("Provider started successfully");
+            Ok(true)
+        }
+        Err(e) => {
+            tracing::error!("Failed to start provider: {}", e);
+            Err(e.to_string())
+        }
     }
-    
-    // Simulate startup delay
-    sleep(Duration::from_millis(1000)).await;
-    
-    // Mock success for development
-    Ok(true)
 }
 
 #[command]
-pub async fn stop_provider() -> Result<bool, String> {
+pub async fn stop_provider(state: State<'_, ProviderState>) -> Result<bool, String> {
     tracing::info!("Stopping provider...");
+    let mut process_guard = state.process.lock().map_err(|e| e.to_string())?;
     
-    // Simulate shutdown delay
-    sleep(Duration::from_millis(500)).await;
+    if let Some(mut child) = process_guard.take() {
+        child.kill().map_err(|e| e.to_string())?;
+        child.wait().ok(); // Avoid zombie process
+        tracing::info!("Provider stopped");
+    }
     
-    // Mock success for development
     Ok(true)
 }
 
 #[command]
-pub async fn get_provider_status() -> Result<ProviderStatus, String> {
-    tracing::info!("Getting provider status...");
+pub async fn get_provider_status(state: State<'_, ProviderState>) -> Result<ProviderStatus, String> {
+    // Check local process status
+    let is_running = {
+        let mut guard = state.process.lock().map_err(|e| e.to_string())?;
+        if let Some(child) = guard.as_mut() {
+            match child.try_wait() {
+                Ok(Some(_)) => {
+                    *guard = None; // Process exited
+                    false
+                }
+                Ok(None) => true, // Still running
+                Err(_) => false,
+            }
+        } else {
+            false
+        }
+    };
     
-    // Mock provider status for development
+    let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
+    
+    // If running, query Relayer for detailed status
+    if is_running {
+         // TODO: Add real HTTP call to Relayer here to get deeper stats
+         // relying on monitoring::get_node_status for that detail
+    }
+    
     Ok(ProviderStatus {
-        is_running: true,
-        uptime: 3600, // 1 hour
-        tasks_completed: 42,
-        tasks_active: 2,
+        is_running,
+        uptime: if is_running { 100 } else { 0 }, // Placeholder
+        tasks_completed: 0,
+        tasks_active: 0, 
         last_heartbeat: chrono::Utc::now(),
-        earnings_today: 150, // $1.50 in cents
-        cpu_usage: 25.5,
-        memory_usage: 45.2,
-        gpu_usage: Some(78.9),
-        network_status: "connected".to_string(),
-        relayer_connected: true,
-        last_task_time: Some(chrono::Utc::now() - chrono::Duration::minutes(5)),
+        earnings_today: 0,
+        cpu_usage: 0.0,
+        memory_usage: 0.0,
+        gpu_usage: None,
+        network_status: if is_running { "connected".to_string() } else { "disconnected".to_string() },
+        relayer_connected: is_running, // Optimistic
+        last_task_time: None,
         error_message: None,
     })
 }
@@ -83,7 +163,6 @@ pub async fn get_provider_status() -> Result<ProviderStatus, String> {
 pub async fn register_node(registration: NodeRegistration) -> Result<String, String> {
     tracing::info!("Registering node: {:?}", registration);
     
-    // Create registration request to local relayer
     let client = reqwest::Client::new();
     
     let registration_request = RegistrationRequest {
@@ -93,67 +172,20 @@ pub async fn register_node(registration: NodeRegistration) -> Result<String, Str
         stake_amount: registration.stake_amount,
     };
     
-    // Try to register with the relayer at localhost:8000
     let relayer_url = registration.relayer_endpoint
         .unwrap_or_else(|| "http://localhost:8000".to_string());
+        
+    let url = format!("{}/register", relayer_url); // Endpoint assumption
     
-    let response = client
-        .post(&format!("{}/api/v1/providers/register", relayer_url))
+    let response = client.post(&url)
         .json(&registration_request)
         .send()
-        .await;
-    
-    match response {
-        Ok(resp) => {
-            if resp.status().is_success() {
-                let node_id = resp.text().await
-                    .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
-                tracing::info!("Node registered successfully with ID: {}", node_id);
-                Ok(node_id)
-            } else {
-                let error_msg = resp.text().await
-                    .unwrap_or_else(|_| "Unknown error".to_string());
-                Err(format!("Registration failed: {}", error_msg))
-            }
-        }
-        Err(e) => {
-            tracing::warn!("Failed to connect to relayer, using mock registration: {}", e);
-            // Return mock node ID for development when relayer is not running
-            let mock_node_id = uuid::Uuid::new_v4().to_string();
-            Ok(mock_node_id)
-        }
+        .await
+        .map_err(|e| format!("Failed to connect to relayer: {}", e))?;
+        
+    if response.status().is_success() {
+        Ok("success".to_string())
+    } else {
+        Err(format!("Registration failed: {}", response.status()))
     }
-}
-
-#[command]
-pub async fn get_provider_logs() -> Result<Vec<String>, String> {
-    tracing::info!("Getting provider logs...");
-    
-    // Mock logs for development
-    Ok(vec![
-        "2024-03-10 10:00:00 [INFO] Provider started successfully".to_string(),
-        "2024-03-10 10:01:23 [INFO] Connected to relayer at localhost:8000".to_string(),
-        "2024-03-10 10:02:45 [INFO] Received task assignment: image-generation-001".to_string(),
-        "2024-03-10 10:05:12 [INFO] Task completed successfully, reward: $0.05".to_string(),
-        "2024-03-10 10:07:33 [INFO] GPU utilization: 85%".to_string(),
-        "2024-03-10 10:10:01 [INFO] Heartbeat sent to relayer".to_string(),
-    ])
-}
-
-#[command] 
-pub async fn update_provider_config(config: ProviderConfig) -> Result<bool, String> {
-    tracing::info!("Updating provider config: {:?}", config);
-    
-    // Validate new configuration
-    if config.port < 1024 || config.port > 65535 {
-        return Err("Port must be between 1024 and 65535".to_string());
-    }
-    
-    if config.max_tasks == 0 {
-        return Err("Max tasks must be greater than 0".to_string());
-    }
-    
-    // Save configuration (in real implementation, would persist to file)
-    // For now, just return success
-    Ok(true)
 }

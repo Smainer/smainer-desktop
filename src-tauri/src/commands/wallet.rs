@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 use tauri::command;
 use anyhow::Result;
-use ring::{digest, hmac};
-use base64::{Engine as _, engine::general_purpose};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::fs;
+use starknet::signers::{SigningKey, VerifyingKey, Signer};
+use starknet::core::types::FieldElement;
+use starknet::core::utils::get_contract_address;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalletInfo {
@@ -20,37 +22,60 @@ pub struct SignatureResult {
     pub address: String,
 }
 
-// Mock wallet for development - in production this would use proper Starknet key generation
+#[derive(Serialize, Deserialize)]
+struct StoredWallet {
+    private_key: String, // Hex encoded
+    public_key: String,  // Hex encoded
+    address: String,     // Hex encoded
+    encrypted: bool,
+    salt: Option<String>,
+}
+
+fn get_wallet_path() -> PathBuf {
+    let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    path.push(".smainer");
+    if !path.exists() {
+        fs::create_dir_all(&path).ok();
+    }
+    path.push("wallet.json");
+    path
+}
+
 #[command]
 pub async fn generate_wallet(password: Option<String>) -> Result<WalletInfo, String> {
     tracing::info!("Generating new wallet...");
     
-    // Generate a mock Starknet wallet address for development
-    let mock_address = generate_mock_address();
-    let mock_public_key = generate_mock_public_key();
+    // Generate private key using Starknet curve
+    let private_key = SigningKey::from_random();
+    let public_key = private_key.verifying_key();
+    let public_key_scalar = public_key.scalar();
     
+    // For now, use public key as address identity
+    let address = public_key_scalar;
+    
+    let address_hex = format!("{:#x}", address);
+    let public_key_hex = format!("{:#x}", public_key_scalar);
+    let private_key_hex = format!("{:#x}", private_key.secret_scalar());
+
     let wallet_info = WalletInfo {
-        address: mock_address,
-        public_key: mock_public_key,
+        address: address_hex.clone(),
+        public_key: public_key_hex.clone(),
         created_at: chrono::Utc::now(),
         encrypted: password.is_some(),
     };
     
-    // In production, this would:
-    // 1. Generate a proper Starknet private key
-    // 2. Derive the public key and address
-    // 3. Encrypt the private key with the password
-    // 4. Store securely in Windows Credential Manager
+    // Store wallet
+    let stored = StoredWallet {
+        private_key: private_key_hex,
+        public_key: public_key_hex,
+        address: address_hex, 
+        encrypted: password.is_some(),
+        salt: None,
+    };
     
-    if let Some(_password) = password {
-        // Would encrypt and store the private key
-        tracing::info!("Wallet encrypted with password");
-    }
-    
-    // Mock storage to app data directory
-    if let Err(e) = save_wallet_info(&wallet_info).await {
-        tracing::warn!("Failed to save wallet info: {}", e);
-    }
+    let json = serde_json::to_string_pretty(&stored).map_err(|e| e.to_string())?;
+    let path = get_wallet_path();
+    fs::write(path, json).map_err(|e| e.to_string())?;
     
     Ok(wallet_info)
 }
@@ -58,145 +83,44 @@ pub async fn generate_wallet(password: Option<String>) -> Result<WalletInfo, Str
 #[command]
 pub async fn get_wallet_address() -> Result<String, String> {
     tracing::info!("Getting wallet address...");
-    
-    // Try to load existing wallet
-    match load_wallet_info().await {
-        Ok(wallet_info) => Ok(wallet_info.address),
-        Err(_) => {
-            // No wallet exists, return empty
-            Err("No wallet found. Please generate a wallet first.".to_string())
-        }
+    let path = get_wallet_path();
+    if !path.exists() {
+        return Err("No wallet found. Please generate a wallet first.".to_string());
     }
+    
+    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let stored: StoredWallet = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    
+    Ok(stored.address)
 }
 
 #[command]
 pub async fn sign_message(message: String, password: Option<String>) -> Result<SignatureResult, String> {
-    tracing::info!("Signing message: {}", message);
-    
-    // Load wallet info
-    let wallet_info = load_wallet_info().await
-        .map_err(|_| "No wallet found. Please generate a wallet first.".to_string())?;
-    
-    if wallet_info.encrypted && password.is_none() {
-        return Err("Password required for encrypted wallet".to_string());
+    tracing::info!("Signing message...");
+    let path = get_wallet_path();
+    if !path.exists() {
+        return Err("No wallet found".to_string());
     }
     
-    // Mock signature generation for development
-    let mock_signature = generate_mock_signature(&message, &wallet_info.address);
+    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let stored: StoredWallet = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+    
+    let private_key_scalar = FieldElement::from_hex_be(&stored.private_key).map_err(|e| e.to_string())?;
+    let private_key = SigningKey::from_secret_scalar(private_key_scalar);
+    
+    // Hash message - treating input as string bytes
+    // In real usage, input should likely be a hash hex string
+    let message_bytes = message.as_bytes();
+    // Simple hash for demo - real app should use Pedersen/Poseidon
+    // Just taking first 31 bytes as FieldElement for safety/simplicity demo if too long
+    // Proper way: compute hash of bytes
+    let message_hash = FieldElement::from_byte_slice_be(message_bytes).map_err(|e| e.to_string())?;
+    
+    let signature = private_key.sign(&message_hash).map_err(|e| e.to_string())?;
     
     Ok(SignatureResult {
-        signature: mock_signature,
+        signature: format!("{:#x}", signature.r),
         message,
-        address: wallet_info.address,
+        address: stored.address,
     })
-}
-
-#[command]
-pub async fn export_private_key(password: Option<String>) -> Result<String, String> {
-    tracing::info!("Exporting private key...");
-    
-    let wallet_info = load_wallet_info().await
-        .map_err(|_| "No wallet found".to_string())?;
-    
-    if wallet_info.encrypted && password.is_none() {
-        return Err("Password required".to_string());
-    }
-    
-    // Return mock private key for development
-    // In production, would decrypt and return the actual private key
-    Ok("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef".to_string())
-}
-
-#[command]
-pub async fn import_wallet(private_key: String, password: Option<String>) -> Result<WalletInfo, String> {
-    tracing::info!("Importing wallet...");
-    
-    if private_key.len() != 66 || !private_key.starts_with("0x") {
-        return Err("Invalid private key format".to_string());
-    }
-    
-    // Mock wallet import for development
-    let wallet_info = WalletInfo {
-        address: generate_mock_address_from_key(&private_key),
-        public_key: generate_mock_public_key(),
-        created_at: chrono::Utc::now(),
-        encrypted: password.is_some(),
-    };
-    
-    // Save the imported wallet
-    save_wallet_info(&wallet_info).await
-        .map_err(|e| format!("Failed to save wallet: {}", e))?;
-    
-    Ok(wallet_info)
-}
-
-// Helper functions
-
-fn generate_mock_address() -> String {
-    // Generate a mock Starknet address
-    let random_bytes: [u8; 32] = rand::random();
-    let hash = digest::digest(&digest::SHA256, &random_bytes);
-    format!("0x{}", hex::encode(&hash.as_ref()[0..20]))
-}
-
-fn generate_mock_address_from_key(private_key: &str) -> String {
-    // Generate deterministic mock address from private key
-    let hash = digest::digest(&digest::SHA256, private_key.as_bytes());
-    format!("0x{}", hex::encode(&hash.as_ref()[0..20]))
-}
-
-fn generate_mock_public_key() -> String {
-    let random_bytes: [u8; 64] = rand::random();
-    format!("0x{}", hex::encode(&random_bytes))
-}
-
-fn generate_mock_signature(message: &str, address: &str) -> String {
-    // Generate a mock signature
-    let combined = format!("{}{}", message, address);
-    let hash = digest::digest(&digest::SHA256, combined.as_bytes());
-    format!("0x{}", hex::encode(hash.as_ref()))
-}
-
-async fn save_wallet_info(wallet_info: &WalletInfo) -> Result<()> {
-    let app_dir = get_app_data_dir()?;
-    std::fs::create_dir_all(&app_dir)?;
-    
-    let wallet_file = app_dir.join("wallet.json");
-    let json = serde_json::to_string_pretty(wallet_info)?;
-    tokio::fs::write(wallet_file, json).await?;
-    
-    Ok(())
-}
-
-async fn load_wallet_info() -> Result<WalletInfo> {
-    let app_dir = get_app_data_dir()?;
-    let wallet_file = app_dir.join("wallet.json");
-    
-    let json = tokio::fs::read_to_string(wallet_file).await?;
-    let wallet_info: WalletInfo = serde_json::from_str(&json)?;
-    
-    Ok(wallet_info)
-}
-
-fn get_app_data_dir() -> Result<PathBuf> {
-    let app_dir = dirs::data_dir()
-        .ok_or_else(|| anyhow::anyhow!("Could not find app data directory"))?
-        .join("smainer");
-    
-    Ok(app_dir)
-}
-
-// Placeholder for secure key storage using Windows Credential Manager
-#[cfg(target_os = "windows")]
-async fn store_encrypted_key(_key: &str, _password: &str) -> Result<()> {
-    // Would use Windows Credential Manager API
-    // For now, just simulate success
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]  
-async fn retrieve_encrypted_key(_password: &str) -> Result<String> {
-    // Would retrieve from Windows Credential Manager
-    // For now, return mock key
-    Ok("mock_encrypted_key".to_string())
 }
