@@ -18,7 +18,7 @@ export default function NodeRegistration({
   onComplete, 
   onBack 
 }: NodeRegistrationProps) {
-  const [relayerUrl, setRelayerUrl] = useState('http://localhost:8000')
+  const [relayerUrl, setRelayerUrl] = useState(import.meta.env.VITE_RELAYER_URL || 'http://localhost:8000')
   const [nodeName, setNodeName] = useState('')
   const [autoStart, setAutoStart] = useState(true)
   const [contactInfo, setContactInfo] = useState('')

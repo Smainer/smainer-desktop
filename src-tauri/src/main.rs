@@ -24,7 +24,10 @@ async fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
-            // Initialize app state, system tray, etc.
+            // Initialize app state
+            app.manage(commands::provider::ProviderState::default());
+            
+            // Initialize system tray
             app.tray_handle().set_tooltip("Smainer Node").unwrap();
             Ok(())
         })

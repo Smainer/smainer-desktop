@@ -50,9 +50,6 @@ Thumbs.db
 /dist/
 
 # Environment variables
-.env
-.env.local
-.env.production
 
 # Temporary files
 *.tmp
@@ -91,3 +88,4 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+config.bat
