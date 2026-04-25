@@ -27,8 +27,8 @@
         "center": true,
         "transparent": false,
         "shadow": true,
-        "theme": "auto",
-        "titleBarStyle": "default"
+        "theme": "Dark",
+        "titleBarStyle": "Visible"
       }
     ],
     "security": {
