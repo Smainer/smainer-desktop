@@ -4,6 +4,7 @@
 )]
 
 use tauri::Manager;
+use tauri::tray::TrayIconBuilder;
 use tracing_subscriber;
 
 mod commands;
@@ -28,7 +29,10 @@ async fn main() {
             app.manage(commands::provider::ProviderState::default());
             
             // Initialize system tray
-            app.tray_handle().set_tooltip("Smainer Node").unwrap();
+            TrayIconBuilder::new()
+                .tooltip("Smainer Node")
+                .build(app.handle())
+                .expect("failed to create tray icon");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
