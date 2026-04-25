@@ -101,8 +101,23 @@ function Get-UserChoices {
     Write-StatusMessage "=== Smainer Daemon Installation Configuration ==="
     Write-Host ""
     
+    # Development mode check first
+    Write-Host "1. Configuration Mode:"
+    Write-Host "   This installer is configured for production deployment by default."
+    Write-Host "   Choose development mode only if you're running a local relayer."
+    $devMode = Read-Host "Use development defaults (localhost:8000)? [y/N] (default: N)"
+    $useDevDefaults = ($devMode -eq "y" -or $devMode -eq "Y")
+    
+    if ($useDevDefaults) {
+        $DEFAULT_RELAYER_URL = "http://localhost:8000"
+        Write-StatusMessage "Development mode selected - using localhost defaults" -Level "WARNING"
+    } else {
+        Write-StatusMessage "Production mode selected - using api.smainer.io defaults" -Level "SUCCESS"
+    }
+    
     # Install mode
-    Write-Host "1. Install Mode:"
+    Write-Host ""
+    Write-Host "2. Install Mode:"
     Write-Host "   [D] Desktop-only test mode (no service installation)"
     Write-Host "   [F] Full daemon install with Windows service"
     $installMode = Read-Host "Select install mode [D/F] (default: F)"
@@ -110,7 +125,7 @@ function Get-UserChoices {
     
     # Relayer URL
     Write-Host ""
-    Write-Host "2. Relayer Configuration:"
+    Write-Host "3. Relayer Configuration:"
     $relayerUrl = Read-Host "Enter relayer URL (default: $DEFAULT_RELAYER_URL)"
     if ([string]::IsNullOrWhiteSpace($relayerUrl)) { $relayerUrl = $DEFAULT_RELAYER_URL }
     
@@ -125,7 +140,7 @@ function Get-UserChoices {
     
     # Node ID
     Write-Host ""
-    Write-Host "3. Node Identification:"
+    Write-Host "4. Node Identification:"
     $nodeId = Read-Host "Enter node ID (alphanumeric, required)"
     while ([string]::IsNullOrWhiteSpace($nodeId) -or $nodeId -notmatch "^[a-zA-Z0-9]+$") {
         Write-StatusMessage "Node ID must be alphanumeric and non-empty" -Level "ERROR"
@@ -134,7 +149,7 @@ function Get-UserChoices {
     
     # Private key input with SecureString
     Write-Host ""
-    Write-Host "4. Wallet Configuration:"
+    Write-Host "5. Wallet Configuration:"
     Write-Host "   SECURITY NOTE: Your private key will be encrypted and stored securely"
     $privateKeySecure = Read-Host "Enter Starknet private key (will be hidden)" -AsSecureString
     
@@ -146,7 +161,7 @@ function Get-UserChoices {
     
     # Ollama installation
     Write-Host ""
-    Write-Host "5. Ollama AI Runtime:"
+    Write-Host "6. Ollama AI Runtime:"
     $installOllama = Read-Host "Install Ollama? [Y/n] (default: Y)"
     $installOllama = ($installOllama -ne "n" -and $installOllama -ne "N")
     
@@ -158,13 +173,13 @@ function Get-UserChoices {
     
     # TransformerLab
     Write-Host ""
-    Write-Host "6. TransformerLab (Advanced):"
+    Write-Host "7. TransformerLab (Advanced):"
     $installTlab = Read-Host "Install TransformerLab? [y/N] (default: N)"
     $installTlab = ($installTlab -eq "y" -or $installTlab -eq "Y")
     
     # Service auto-start
     Write-Host ""
-    Write-Host "7. Service Configuration:"
+    Write-Host "8. Service Configuration:"
     $autoStart = Read-Host "Register service for auto-start on boot? [Y/n] (default: Y)"
     $autoStart = ($autoStart -ne "n" -and $autoStart -ne "N")
     

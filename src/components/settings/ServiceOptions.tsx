@@ -11,7 +11,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
   const [autoStart, setAutoStart] = useState(true)
   const [maxTasks, setMaxTasks] = useState(10)
   const [port, setPort] = useState(8080)
-  const [relayerUrl, setRelayerUrl] = useState('http://localhost:8000')
+  const [relayerUrl, setRelayerUrl] = useState('https://api.smainer.io')
   const [gpuEnabled, setGpuEnabled] = useState(true)
   const [logLevel, setLogLevel] = useState('info')
 
@@ -72,7 +72,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
                 type="text"
                 value={relayerUrl}
                 onChange={(e) => setRelayerUrl(e.target.value)}
-                placeholder="http://localhost:8000"
+                placeholder="https://api.smainer.io"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

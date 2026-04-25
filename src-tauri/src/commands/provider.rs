@@ -17,7 +17,7 @@ impl Default for ProviderState {
     fn default() -> Self {
         Self {
             process: Mutex::new(None),
-            relayer_url: Mutex::new("http://localhost:8000".to_string()),
+            relayer_url: Mutex::new("https://api.smainer.io".to_string()),
         }
     }
 }
@@ -173,7 +173,7 @@ pub async fn register_node(registration: NodeRegistration) -> Result<String, Str
     };
     
     let relayer_url = registration.relayer_endpoint
-        .unwrap_or_else(|| "http://localhost:8000".to_string());
+        .unwrap_or_else(|| "https://api.smainer.io".to_string());
         
     let url = format!("{}/register", relayer_url); // Endpoint assumption
     

@@ -16,7 +16,7 @@ Windows desktop application for easy Smainer provider node onboarding and manage
 - Windows 10/11
 - NVIDIA or AMD GPU with 4GB+ VRAM (recommended)
 - 8GB+ RAM
-- Smainer relayer running on localhost:8000
+- Internet connection for Smainer network (production) or local relayer for development
 
 ## Installation
 
@@ -47,11 +47,16 @@ The installer will ask you to configure:
    - `[D]` Desktop-only test mode (no Windows service)
    - `[F]` Full daemon install with Windows service (default)
 
-2. **Relayer URL**: Default is `https://api.smainer.io`
-   - Use `http://localhost:8000` for local development
+2. **Relayer URL**: Default is `https://api.smainer.io` (production)
    - HTTPS required for production relayers (security validation)
+   - For development: Use `http://localhost:8000` when running a local relayer
 
-3. **Node ID**: Alphanumeric identifier for your provider node
+3. **Development Mode**: 
+   - The installer will ask "Use development defaults?" (default: N)
+   - Choose Y to configure for local development with localhost endpoints
+   - Choose N for production deployment (recommended for most users)
+
+4. **Node ID**: Alphanumeric identifier for your provider node
 
 4. **Wallet Configuration**: 
    - Enter your Starknet private key (input hidden)

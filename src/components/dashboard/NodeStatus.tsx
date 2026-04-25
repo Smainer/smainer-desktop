@@ -27,7 +27,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
       // Start with basic config
       startProvider.mutate({
         wallet_address: 'mock_address',
-        relayer_url: 'http://localhost:8000',
+        relayer_url: 'https://api.smainer.io',
         port: 8080,
         max_tasks: 10,
         gpu_enabled: true,

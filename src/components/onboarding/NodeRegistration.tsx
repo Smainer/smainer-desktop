@@ -18,7 +18,7 @@ export default function NodeRegistration({
   onComplete, 
   onBack 
 }: NodeRegistrationProps) {
-  const [relayerUrl, setRelayerUrl] = useState(import.meta.env.VITE_RELAYER_URL || 'http://localhost:8000')
+  const [relayerUrl, setRelayerUrl] = useState(import.meta.env.VITE_RELAYER_URL || 'https://api.smainer.io')
   const [nodeName, setNodeName] = useState('')
   const [autoStart, setAutoStart] = useState(true)
   const [contactInfo, setContactInfo] = useState('')
@@ -115,11 +115,11 @@ export default function NodeRegistration({
               type="text"
               value={relayerUrl}
               onChange={(e) => setRelayerUrl(e.target.value)}
-              placeholder="http://localhost:8000"
+              placeholder="https://api.smainer.io"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <p className="text-xs text-gray-500 mt-1">
-              URL of the Smainer relayer service. Use localhost:8000 for local development.
+              URL of the Smainer relayer service. Use http://localhost:8000 for local development.
             </p>
           </div>
 
