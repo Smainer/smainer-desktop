@@ -38,12 +38,19 @@ jobs:
         env:
           MONOREPO_TOKEN: ${{ secrets.MONOREPO_TOKEN }}
         run: |
-          # Clone only backend/provider from the private monorepo using PAT
-          git clone --depth 1 --filter=blob:none --sparse `
-            "https://$env:MONOREPO_TOKEN@github.com/Smainer/smainer.git" _monorepo
-          cd _monorepo
-          git sparse-checkout set backend/provider
-          cd ..
+          # Clone monorepo (shallow) using PAT
+          git clone --depth 1 `
+            "https://x-access-token:$env:MONOREPO_TOKEN@github.com/Smainer/smainer.git" `
+            _monorepo
+
+          # Verify the file exists before proceeding
+          $mainPy = "_monorepo\backend\provider\src\provider\main.py"
+          if (-not (Test-Path $mainPy)) {
+            Write-Error "Provider main.py not found at $mainPy"
+            Get-ChildItem _monorepo\backend -Recurse -Name | Select-Object -First 30
+            exit 1
+          }
+          Write-Host "Found: $mainPy"
 
           # Install provider dependencies + PyInstaller
           pip install pyinstaller websockets psutil starknet-py aiohttp
@@ -57,14 +64,15 @@ jobs:
             --hidden-import=provider.main `
             --hidden-import=websockets `
             --hidden-import=psutil `
-            _monorepo/backend/provider/src/provider/main.py
+            $mainPy
 
           # Place in Tauri sidecar location with target triple
           New-Item -ItemType Directory -Force -Path src-tauri\binaries
           Copy-Item dist-provider\smainer-provider.exe `
             src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe
 
-          Write-Host "Sidecar built: $(Get-Item src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe | Select-Object -ExpandProperty Length) bytes"
+          $size = (Get-Item src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe).Length
+          Write-Host "Sidecar built: $size bytes"
 
       - name: Install frontend deps
         run: npm ci
