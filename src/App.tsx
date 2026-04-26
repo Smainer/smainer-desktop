@@ -6,6 +6,7 @@ import { SmainerLogo } from './components/ui/SmainerLogo.tsx';
 
 // Onboarding Components
 import SystemCheck from './components/onboarding/SystemCheck.tsx';
+import AISetup from './components/onboarding/AISetup.tsx';
 import WalletSetup from './components/onboarding/WalletSetup.tsx';
 import NodeRegistration from './components/onboarding/NodeRegistration.tsx';
 
@@ -114,8 +115,9 @@ function AppContent() {
                 <div className="flex items-center space-x-8">
                   {[
                     { step: 0, title: 'System Check', component: 'CheckCircle' },
-                    { step: 1, title: 'Wallet Setup', component: 'Wallet' },
-                    { step: 2, title: 'Node Registration', component: 'Server' },
+                    { step: 1, title: 'AI Setup', component: 'Cpu' },
+                    { step: 2, title: 'Wallet Setup', component: 'Wallet' },
+                    { step: 3, title: 'Node Registration', component: 'Server' },
                   ].map(({ step, title, component }) => {
                     const isActive = step === appState.currentStep;
                     const isCompleted = step < appState.currentStep;
@@ -132,6 +134,11 @@ function AppContent() {
                           {component === 'CheckCircle' && (
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                          {component === 'Cpu' && (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                             </svg>
                           )}
                           {component === 'Wallet' && (
@@ -156,19 +163,25 @@ function AppContent() {
                 <SystemCheck onNext={() => setAppState(prev => ({ ...prev, currentStep: 1 }))} />
               )}
               {appState.currentStep === 1 && (
-                <WalletSetup
-                  onNext={(address) => {
-                    setAppState(prev => ({ ...prev, currentStep: 2, walletAddress: address }));
-                  }}
+                <AISetup
+                  onNext={() => setAppState(prev => ({ ...prev, currentStep: 2 }))}
                   onBack={() => setAppState(prev => ({ ...prev, currentStep: 0 }))}
                 />
               )}
               {appState.currentStep === 2 && (
+                <WalletSetup
+                  onNext={(address) => {
+                    setAppState(prev => ({ ...prev, currentStep: 3, walletAddress: address }));
+                  }}
+                  onBack={() => setAppState(prev => ({ ...prev, currentStep: 1 }))}
+                />
+              )}
+              {appState.currentStep === 3 && (
                 <NodeRegistration
                   walletAddress={appState.walletAddress!}
                   hardwareInfo={hardwareInfo}
                   onComplete={handleOnboardingComplete}
-                  onBack={() => setAppState(prev => ({ ...prev, currentStep: 1 }))}
+                  onBack={() => setAppState(prev => ({ ...prev, currentStep: 2 }))}
                 />
               )}
             </div>

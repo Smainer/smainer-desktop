@@ -3,7 +3,9 @@ use tauri::{command, State};
 use anyhow::Result;
 use std::process::{Command, Stdio, Child};
 use std::sync::Mutex;
-use crate::models::{ProviderStatus, NodeRegistration};
+use std::fs;
+use std::path::PathBuf;
+use crate::models::{ProviderStatus, NodeRegistration, AICapabilityConfig, AICapabilityReport, SystemValidation, ModelValidation, CompatibilityStatus};
 
 // Global state managed by Tauri
 pub struct ProviderState {
@@ -265,5 +267,193 @@ pub async fn check_registration_status(wallet_address: String) -> Result<bool, S
             // Network error - assume not registered for safety
             Ok(false)
         }
+    }
+}
+
+/// Get the AI capability configuration file path
+fn get_ai_config_path() -> PathBuf {
+    let mut path = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    path.push(".smainer");
+    path.push("ai_config.json");
+    path
+}
+
+/// Ensure the .smainer directory exists
+fn ensure_config_directory() -> Result<(), String> {
+    let mut path = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    path.push(".smainer");
+    if !path.exists() {
+        fs::create_dir_all(&path).map_err(|e| format!("Failed to create config directory: {}", e))?;
+    }
+    Ok(())
+}
+
+#[command]
+pub async fn save_ai_config(config: AICapabilityConfig) -> Result<bool, String> {
+    tracing::info!("Saving AI capability config");
+    
+    ensure_config_directory()?;
+    let config_path = get_ai_config_path();
+    
+    let mut updated_config = config;
+    updated_config.updated_at = chrono::Utc::now();
+    
+    let json_content = serde_json::to_string_pretty(&updated_config)
+        .map_err(|e| format!("Failed to serialize config: {}", e))?;
+    
+    fs::write(&config_path, json_content)
+        .map_err(|e| format!("Failed to write config file: {}", e))?;
+    
+    tracing::info!("AI capability config saved to {:?}", config_path);
+    Ok(true)
+}
+
+#[command]
+pub async fn load_ai_config() -> Result<AICapabilityConfig, String> {
+    let config_path = get_ai_config_path();
+    
+    if !config_path.exists() {
+        tracing::info!("AI config file not found, returning default config");
+        return Ok(AICapabilityConfig::default());
+    }
+    
+    let content = fs::read_to_string(&config_path)
+        .map_err(|e| format!("Failed to read config file: {}", e))?;
+    
+    let config: AICapabilityConfig = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse config file: {}", e))?;
+    
+    tracing::info!("AI capability config loaded from {:?}", config_path);
+    Ok(config)
+}
+
+#[command]
+pub async fn validate_ai_capabilities(config: AICapabilityConfig) -> Result<AICapabilityReport, String> {
+    tracing::info!("Validating AI capabilities");
+    
+    // Get current hardware info for validation
+    let hardware = crate::commands::hardware::get_system_info().await
+        .map_err(|e| format!("Failed to get hardware info: {}", e))?;
+    
+    let mut system_validation = SystemValidation {
+        meets_ai_requirements: true,
+        ollama_available: false,
+        models_validated: std::collections::HashMap::new(),
+        warnings: vec![],
+        errors: vec![],
+    };
+    
+    // Check Ollama availability
+    if config.ai_serving_enabled {
+        if let Some(ollama_config) = &config.ollama_config {
+            if ollama_config.install_requested {
+                // Check if Ollama is installed and accessible
+                system_validation.ollama_available = check_ollama_available(&ollama_config.api_endpoint).await;
+                
+                if !system_validation.ollama_available {
+                    system_validation.errors.push(
+                        "Ollama is required but not available. Please install Ollama or disable AI serving.".to_string()
+                    );
+                    system_validation.meets_ai_requirements = false;
+                }
+            }
+        } else {
+            system_validation.errors.push(
+                "AI serving enabled but no Ollama configuration found.".to_string()
+            );
+            system_validation.meets_ai_requirements = false;
+        }
+    }
+    
+    // Validate each enabled model
+    for model in &config.model_preferences {
+        if model.enabled {
+            let validation = validate_model_requirements(model, &hardware);
+            
+            if !validation.vram_sufficient || !validation.ram_sufficient {
+                system_validation.meets_ai_requirements = false;
+            }
+            
+            if !validation.vram_sufficient {
+                system_validation.warnings.push(
+                    format!("Model {} may run slowly: insufficient VRAM", model.name)
+                );
+            }
+            
+            if !validation.ram_sufficient {
+                system_validation.warnings.push(
+                    format!("Model {} may run slowly: insufficient RAM", model.name)
+                );
+            }
+            
+            system_validation.models_validated.insert(model.name.clone(), validation);
+        }
+    }
+    
+    let compatibility_status = if system_validation.meets_ai_requirements && system_validation.errors.is_empty() {
+        if system_validation.warnings.is_empty() {
+            CompatibilityStatus::Optimal
+        } else {
+            CompatibilityStatus::Acceptable
+        }
+    } else if system_validation.errors.len() < 2 {
+        CompatibilityStatus::Limited
+    } else {
+        CompatibilityStatus::Incompatible
+    };
+    
+    Ok(AICapabilityReport {
+        config,
+        system_validation,
+        compatibility_status,
+    })
+}
+
+async fn check_ollama_available(endpoint: &str) -> bool {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/version", endpoint);
+    
+    match client.get(&url).send().await {
+        Ok(response) => response.status().is_success(),
+        Err(_) => false,
+    }
+}
+
+fn validate_model_requirements(
+    model: &crate::models::ModelConfig, 
+    hardware: &crate::models::HardwareInfo
+) -> ModelValidation {
+    let ram_gb = hardware.total_ram / (1024 * 1024 * 1024);
+    let best_gpu = hardware.gpus.iter()
+        .filter(|gpu| gpu.is_supported)
+        .max_by_key(|gpu| gpu.memory);
+    
+    let vram_gb = best_gpu.map(|gpu| gpu.memory / 1024).unwrap_or(0) as u32;
+    
+    let vram_sufficient = if model.requirements.requires_gpu {
+        vram_gb >= model.requirements.min_vram_gb
+    } else {
+        true // GPU not required
+    };
+    
+    let ram_sufficient = ram_gb as u32 >= model.requirements.min_ram_gb;
+    let disk_sufficient = true; // Assume disk space is available for now
+    
+    let performance_tier = if vram_sufficient && ram_sufficient && vram_gb >= model.requirements.min_vram_gb + 2 {
+        "optimal"
+    } else if vram_sufficient && ram_sufficient {
+        "acceptable" 
+    } else if ram_sufficient {
+        "limited"
+    } else {
+        "insufficient"
+    };
+    
+    ModelValidation {
+        available: true, // Assume model can be downloaded
+        vram_sufficient,
+        ram_sufficient,
+        disk_sufficient,
+        performance_tier: performance_tier.to_string(),
     }
 }

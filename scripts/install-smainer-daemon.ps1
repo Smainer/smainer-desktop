@@ -60,6 +60,7 @@ $script:InstallState = @{
     UserCreated = $false
     DirectoriesCreated = @()
     CredentialsStored = $false
+    CredentialTarget = $null
     ComponentsInstalled = @()
 }
 
@@ -174,16 +175,87 @@ function Get-UserChoices {
     # Clear the SecureString
     $privateKeySecure.Dispose()
     
+    # Generate secure GUID-based credential target
+    $credentialGuid = [System.Guid]::NewGuid().ToString()
+    $credentialTarget = "SmaineR_Cred_$credentialGuid"
+    
     # Ollama installation
     Write-Host ""
-    Write-Host "6. Ollama AI Runtime:"
-    $installOllama = Read-Host "Install Ollama? [Y/n] (default: Y)"
-    $installOllama = ($installOllama -ne "n" -and $installOllama -ne "N")
+    Write-Host "6. AI Inference Capability:"
+    Write-Host "   Enable AI serving to accept higher-paying inference tasks."
+    Write-Host "   WHY WE ASK: AI tasks require additional system resources and model downloads."
+    Write-Host "   Your hardware will be validated to ensure stable operation."
+    $enableAI = Read-Host "Enable AI inference serving? [Y/n] (default: n)"
+    $enableAI = ($enableAI -eq "y" -or $enableAI -eq "Y")
     
+    $installOllama = $false
     $pullModel = $false
-    if ($installOllama) {
-        $pullModel = Read-Host "Pull llama3.1:8b model? (4.7GB download) [Y/n] (default: Y)"
-        $pullModel = ($pullModel -ne "n" -and $pullModel -ne "N")
+    $aiPrivacyMode = "Standard"
+    $selectedModels = @()
+    
+    if ($enableAI) {
+        Write-Host ""
+        Write-Host "   6a. Ollama Runtime:"
+        Write-Host "       Ollama is required to run AI models locally."
+        Write-Host "       WHY WE ASK: Without Ollama, your node cannot serve AI tasks."
+        $installOllama = Read-Host "       Install Ollama? [Y/n] (default: Y)"
+        $installOllama = ($installOllama -ne "n" -and $installOllama -ne "N")
+        
+        if ($installOllama) {
+            Write-Host ""
+            Write-Host "   6b. Model Selection:"
+            Write-Host "       Different models have varying system requirements and earning potential."
+            Write-Host "       WHY WE ASK: We match models to your hardware to prevent system overload."
+            Write-Host ""
+            Write-Host "       Available models:"
+            Write-Host "       [1] llama3.1:8b (6GB VRAM, 8GB RAM, 5GB disk) - Balanced performance"
+            Write-Host "       [2] mistral:7b   (4GB VRAM, 8GB RAM, 4GB disk) - Fast inference"
+            Write-Host "       [3] phi3:mini    (2GB VRAM, 4GB RAM, 2GB disk) - Lightweight, CPU-compatible"
+            $modelChoice = Read-Host "       Select model(s) [1,2,3] or [1-3] (comma-separated, default: 1)"
+            if ([string]::IsNullOrWhiteSpace($modelChoice)) { $modelChoice = "1" }
+            
+            $modelChoice.Split(",") | ForEach-Object {
+                switch ($_.Trim()) {
+                    "1" { $selectedModels += "llama3.1:8b" }
+                    "2" { $selectedModels += "mistral:7b" }
+                    "3" { $selectedModels += "phi3:mini" }
+                }
+            }
+            
+            $pullModel = $selectedModels.Count -gt 0
+            
+            if ($pullModel) {
+                $totalSize = 0
+                $selectedModels | ForEach-Object {
+                    switch ($_) {
+                        "llama3.1:8b" { $totalSize += 4.7 }
+                        "mistral:7b"  { $totalSize += 4.1 }
+                        "phi3:mini"   { $totalSize += 2.2 }
+                    }
+                }
+                Write-Host "       Total download size: approximately $([math]::Round($totalSize, 1))GB"
+                $confirmDownload = Read-Host "       Download selected models now? [Y/n] (default: Y)"
+                $pullModel = ($confirmDownload -ne "n" -and $confirmDownload -ne "N")
+            }
+        }
+        
+        Write-Host ""
+        Write-Host "   6c. Privacy Mode:"
+        Write-Host "       Choose how much information your node shares during AI tasks."
+        Write-Host "       WHY WE ASK: Privacy settings affect task eligibility and data protection."
+        Write-Host "       Higher privacy may limit some high-paying tasks."
+        Write-Host ""
+        Write-Host "       [S] Standard - Normal operation, all task types (default)"
+        Write-Host "       [E] Enhanced - Minimal logging, some task limitations"
+        Write-Host "       [M] Maximum - Local only, significant limitations"
+        $privacyChoice = Read-Host "       Select privacy mode [S/E/M] (default: S)"
+        switch ($privacyChoice.ToUpper()) {
+            "E" { $aiPrivacyMode = "Enhanced" }
+            "M" { $aiPrivacyMode = "Maximum" }
+            default { $aiPrivacyMode = "Standard" }
+        }
+    } else {
+        Write-Host "   AI serving disabled. You can enable this later in the desktop app settings."
     }
     
     # TransformerLab
@@ -198,16 +270,28 @@ function Get-UserChoices {
     $autoStart = Read-Host "Register service for auto-start on boot? [Y/n] (default: Y)"
     $autoStart = ($autoStart -ne "n" -and $autoStart -ne "N")
     
-    return @{
+    $configResult = @{
         InstallMode = $installMode
         RelayerUrl = $relayerUrl
         NodeId = $nodeId
         PrivateKeyEncrypted = $privateKeyEncrypted
+        CredentialTarget = $credentialTarget
+        EnableAI = $enableAI
         InstallOllama = $installOllama
         PullModel = $pullModel
+        SelectedModels = $selectedModels
+        AIPrivacyMode = $aiPrivacyMode
         InstallTlab = $installTlab
         AutoStart = $autoStart
     }
+    
+    # SEC-001: Clear sensitive variables from memory
+    $privateKeyEncrypted = $null
+    $credentialGuid = $null
+    $credentialTarget = $null
+    [System.GC]::Collect()
+    
+    return $configResult
 }
 
 function Invoke-SecureDownload {
@@ -344,6 +428,8 @@ function New-SmaineRConfig {
     )
     
     $configData = @{
+        schema_version = "1.0.0"
+        contract_version = "2024.1"
         relayer_url = $Config.RelayerUrl
         node_id = $Config.NodeId
         wallet = @{
@@ -354,6 +440,45 @@ function New-SmaineRConfig {
             max_concurrent_tasks = 4
             gpu_enabled = $true
             log_level = "INFO"
+        }
+        ai_capability = @{
+            schema_version = "1.0.0"
+            contract_version = "2024.1"
+            ai_serving_enabled = $Config.EnableAI
+            ollama_config = if ($Config.InstallOllama) {
+                @{
+                    install_requested = $true
+                    api_endpoint = "http://localhost:11434"
+                    models_to_install = $Config.SelectedModels
+                    auto_update = $false
+                }
+            } else { $null }
+            model_preferences = if ($Config.EnableAI -and $Config.SelectedModels.Count -gt 0) {
+                $Config.SelectedModels | ForEach-Object {
+                    $requirements = switch ($_) {
+                        "llama3.1:8b" { @{ min_vram_gb = 6; min_ram_gb = 8; min_disk_gb = 5; requires_gpu = $true; network_bandwidth_mbps = 50 } }
+                        "mistral:7b"  { @{ min_vram_gb = 4; min_ram_gb = 8; min_disk_gb = 4; requires_gpu = $true; network_bandwidth_mbps = 25 } }
+                        "phi3:mini"   { @{ min_vram_gb = 2; min_ram_gb = 4; min_disk_gb = 2; requires_gpu = $false; network_bandwidth_mbps = 10 } }
+                        default       { @{ min_vram_gb = 4; min_ram_gb = 8; min_disk_gb = 4; requires_gpu = $true; network_bandwidth_mbps = 25 } }
+                    }
+                    @{
+                        name = $_
+                        enabled = $true
+                        priority = 8
+                        requirements = $requirements
+                    }
+                }
+            } else { @() }
+            privacy_mode = $Config.AIPrivacyMode
+            resources = @{
+                max_cpu_percent = 80
+                max_ram_gb = 16
+                max_vram_gb = $null
+                max_disk_io_mbps = $null
+                max_network_mbps = $null
+            }
+            created_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            updated_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
         }
         components = @{
             ollama_installed = $Config.InstallOllama
@@ -398,25 +523,47 @@ function Store-SecureCredentials {
         [Parameter(Mandatory)]
         [string]$NodeId,
         [Parameter(Mandatory)]  
-        [string]$EncryptedPrivateKey
+        [string]$EncryptedPrivateKey,
+        [Parameter(Mandatory)]
+        [string]$CredentialTarget
     )
     
     if ($DryRun) {
-        Write-StatusMessage "DRY RUN: Would store encrypted credentials in Windows Credential Manager"
+        Write-StatusMessage "DRY RUN: Would store encrypted credentials in Windows Credential Manager using secure target"
         return
     }
     
     Write-StatusMessage "Storing credentials in Windows Credential Manager..."
     
     try {
-        # Store encrypted private key in Windows Credential Manager
-        cmdkey /generic:"Smainer_$NodeId" /user:$NodeId /pass:$EncryptedPrivateKey
+        # SEC-002: Use GUID-based credential target instead of predictable NodeId
+        cmdkey /generic:"$CredentialTarget" /user:$NodeId /pass:$EncryptedPrivateKey
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to store credentials with cmdkey"
         }
         
+        # Store the mapping for service retrieval
+        $mappingPath = "$env:ProgramData\Smainer\credential-mapping.json"
+        $mapping = @{ "target" = $CredentialTarget; "nodeId" = $NodeId }
+        $mapping | ConvertTo-Json -Depth 2 | Out-File -FilePath $mappingPath -Encoding UTF8
+        
+        # Set secure permissions on mapping file
+        $acl = Get-Acl $mappingPath
+        $acl.SetAccessRuleProtection($true, $false)
+        $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Administrators", "FullControl", "Allow")
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("NT AUTHORITY\SYSTEM", "FullControl", "Allow")
+        $acl.SetAccessRule($adminRule)
+        $acl.SetAccessRule($systemRule)
+        Set-Acl -Path $mappingPath -AclObject $acl
+        
         $script:InstallState.CredentialsStored = $true
+        $script:InstallState.CredentialTarget = $CredentialTarget
         Write-StatusMessage "Credentials stored securely" -Level "SUCCESS"
+        
+        # SEC-001: Clear sensitive variables from function scope
+        $EncryptedPrivateKey = $null
+        $mapping = $null
+        [System.GC]::Collect()
     }
     catch {
         throw "Failed to store credentials: $($_.Exception.Message)"
@@ -577,9 +724,14 @@ function Invoke-InstallationRollback {
         }
         
         # Remove credentials
-        if ($script:InstallState.CredentialsStored) {
+        if ($script:InstallState.CredentialsStored -and $script:InstallState.CredentialTarget) {
             Write-StatusMessage "Removing stored credentials..."
-            cmdkey /delete:"Smainer_*" 2>$null
+            cmdkey /delete:"$($script:InstallState.CredentialTarget)" 2>$null
+            # Also remove the mapping file
+            $mappingPath = "$env:ProgramData\Smainer\credential-mapping.json"
+            if (Test-Path $mappingPath) {
+                Remove-Item -Path $mappingPath -Force 2>$null
+            }
         }
         
         # Remove user account
@@ -613,10 +765,14 @@ function Show-InstallationSummary {
     Write-StatusMessage "=== INSTALLATION COMPLETED SUCCESSFULLY ===" -Level "SUCCESS"
     Write-Host ""
     
+    # SEC-003: Sanitize sensitive operational identifiers in summary output
+    $sanitizedNodeId = if ($DryRun) { "<node-id>" } else { $Config.NodeId }
+    $sanitizedRelayerUrl = if ($DryRun -and $Config.RelayerUrl -ne $DEFAULT_RELAYER_URL) { "<relayer-url>" } else { $Config.RelayerUrl }
+    
     Write-Host "Configuration Summary:" -ForegroundColor Cyan
     Write-Host "  - Install Mode: $($Config.InstallMode)" -ForegroundColor White
-    Write-Host "  - Relayer URL: $($Config.RelayerUrl)" -ForegroundColor White  
-    Write-Host "  - Node ID: $($Config.NodeId)" -ForegroundColor White
+    Write-Host "  - Relayer URL: $sanitizedRelayerUrl" -ForegroundColor White  
+    Write-Host "  - Node ID: $sanitizedNodeId" -ForegroundColor White
     Write-Host "  - Service Account: $SMAINER_USER" -ForegroundColor White
     Write-Host "  - Config File: $SMAINER_CONFIG" -ForegroundColor White
     Write-Host "  - Log Directory: $SMAINER_LOG" -ForegroundColor White
@@ -680,7 +836,7 @@ function Start-Installation {
         
         # Store credentials securely
         if (-not $ConfigOnly) {
-            Store-SecureCredentials -NodeId $config.NodeId -EncryptedPrivateKey $config.PrivateKeyEncrypted
+            Store-SecureCredentials -NodeId $config.NodeId -EncryptedPrivateKey $config.PrivateKeyEncrypted -CredentialTarget $config.CredentialTarget
         }
         
         # Install optional components

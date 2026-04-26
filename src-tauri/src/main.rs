@@ -47,6 +47,9 @@ async fn main() {
             provider::get_provider_status,
             provider::register_node,
             provider::check_registration_status,
+            provider::save_ai_config,
+            provider::load_ai_config,
+            provider::validate_ai_capabilities,
             
             // Wallet commands
             wallet::generate_wallet,
