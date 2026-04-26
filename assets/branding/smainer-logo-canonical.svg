@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Smainer Canonical Logo - Distributed Compute Blocks -->
+  <!-- Background container - rounded for modern feel -->
+  <rect width="512" height="512" rx="96" fill="#09090B"/>
+  
+  <!-- Distributed compute blocks arranged in S formation -->
+  <!-- Top row -->
+  <rect x="200" y="104" width="112" height="48" rx="8" fill="#FFFFFF"/>
+  <rect x="328" y="104" width="48" height="48" rx="8" fill="#3B82F6"/>
+  
+  <!-- Second row -->
+  <rect x="136" y="168" width="48" height="48" rx="8" fill="#FFFFFF"/>
+  
+  <!-- Third row -->
+  <rect x="200" y="232" width="112" height="48" rx="8" fill="#FFFFFF"/>
+  
+  <!-- Fourth row -->
+  <rect x="328" y="296" width="48" height="48" rx="8" fill="#FFFFFF"/>
+  
+  <!-- Bottom row -->
+  <rect x="136" y="360" width="48" height="48" rx="8" fill="#3B82F6"/>
+  <rect x="200" y="360" width="112" height="48" rx="8" fill="#FFFFFF"/>
+</svg>

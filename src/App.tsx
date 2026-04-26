@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
 import { Toaster } from './components/ui/sonner.tsx';
+import { SmainerLogo } from './components/ui/SmainerLogo.tsx';
 
 // Onboarding Components
 import SystemCheck from './components/onboarding/SystemCheck.tsx';
@@ -88,36 +89,54 @@ function AppContent() {
 
   if (!appState.onboardingComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Smainer Desktop</h1>
-            <p className="text-lg text-gray-600">Set up your provider node in minutes</p>
+      <div className="min-h-screen bg-void">
+        <div className="container mx-auto px-6 py-8">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-bold text-white mb-4 font-mono tracking-tight">Smainer Desktop</h1>
+            <p className="text-lg text-zinc-400">Set up your provider node in minutes</p>
           </div>
 
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="bg-card rounded-lg border border-border p-8">
               <div className="flex items-center justify-center mb-8">
                 <div className="flex items-center space-x-8">
                   {[
-                    { step: 0, title: 'System Check', icon: '🔍' },
-                    { step: 1, title: 'Wallet Setup', icon: '👛' },
-                    { step: 2, title: 'Node Registration', icon: '🚀' },
-                  ].map(({ step, title, icon }) => (
-                    <div
-                      key={step}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-                        step === appState.currentStep
-                          ? 'bg-blue-100 text-blue-800'
-                          : step < appState.currentStep
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      <span className="text-2xl">{icon}</span>
-                      <span className="font-medium">{title}</span>
-                    </div>
-                  ))}
+                    { step: 0, title: 'System Check', component: 'CheckCircle' },
+                    { step: 1, title: 'Wallet Setup', component: 'Wallet' },
+                    { step: 2, title: 'Node Registration', component: 'Server' },
+                  ].map(({ step, title, component }) => {
+                    const isActive = step === appState.currentStep;
+                    const isCompleted = step < appState.currentStep;
+                    const baseClasses = 'flex items-center space-x-3 px-6 py-3 rounded-lg border';
+                    const stateClasses = isActive 
+                      ? 'bg-primary/10 text-primary border-primary'
+                      : isCompleted
+                      ? 'bg-zinc-800 text-white border-zinc-700'
+                      : 'bg-zinc-900 text-zinc-400 border-zinc-800';
+                    
+                    return (
+                      <div key={step} className={baseClasses + ' ' + stateClasses}>
+                        <div className="w-6 h-6 flex items-center justify-center">
+                          {component === 'CheckCircle' && (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                          {component === 'Wallet' && (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                          )}
+                          {component === 'Server' && (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="font-medium font-mono tracking-tight">{title}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -148,29 +167,32 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-void">
+      <div className="bg-card shadow-sm border-b border-border">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Smainer Desktop</h1>
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${nodeStatus?.is_online ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-sm text-gray-600">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
+                <SmainerLogo size={36} variant="white" />
+                <h1 className="text-2xl font-bold text-white font-mono tracking-tight">Smainer Desktop</h1>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className={'w-3 h-3 rounded-full ' + (nodeStatus?.is_online ? 'bg-primary' : 'bg-destructive')} />
+                <span className="text-sm text-zinc-400 font-mono">
                   {nodeStatus?.is_online ? 'Online' : 'Offline'}
                 </span>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <div className="text-right">
-                <div className="text-sm text-gray-600">Today's Earnings</div>
-                <div className="text-lg font-bold text-green-600">
+                <div className="text-sm text-zinc-400 font-mono">Today's Earnings</div>
+                <div className="text-lg font-bold text-primary font-mono">
                   ${((nodeStatus?.earnings_today || 0) / 100).toFixed(2)}
                 </div>
               </div>
               <button
                 onClick={resetOnboarding}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-sm text-zinc-400 hover:text-white border border-zinc-800 rounded-lg hover:bg-zinc-800 font-mono tracking-tight"
               >
                 Reset Setup
               </button>
@@ -179,16 +201,16 @@ function AppContent() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-6 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800">
+            <TabsTrigger value="dashboard" className="font-mono">Dashboard</TabsTrigger>
+            <TabsTrigger value="tasks" className="font-mono">Tasks</TabsTrigger>
+            <TabsTrigger value="settings" className="font-mono">Settings</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <TabsContent value="dashboard" className="space-y-8 mt-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
                 <NodeStatus status={nodeStatus} />
               </div>
