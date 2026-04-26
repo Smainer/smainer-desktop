@@ -69,33 +69,30 @@ pub async fn start_provider(
     let sidecar_name = if cfg!(target_os = "windows") { "smainer-provider.exe" } else { "smainer-provider" };
     let sidecar_path = exe_dir.join(sidecar_name);
 
-    // Command construction
-    let mut cmd = if sidecar_path.exists() {
+    // Check for environment variable override first
+    let mut cmd = if let Ok(custom_cmd) = std::env::var("SMAINER_PROVIDER_CMD") {
+        // Environment override: use custom provider command
+        let mut env_cmd = Command::new(&custom_cmd);
+        
+        // Apply custom args if provided
+        if let Ok(custom_args) = std::env::var("SMAINER_PROVIDER_ARGS") {
+            if let Ok(args_vec) = serde_json::from_str::<Vec<String>>(&custom_args) {
+                env_cmd.args(&args_vec);
+            }
+        }
+        
+        // Apply custom working directory if provided
+        if let Ok(custom_cwd) = std::env::var("SMAINER_PROVIDER_CWD") {
+            env_cmd.current_dir(&custom_cwd);
+        }
+        
+        env_cmd
+    } else if sidecar_path.exists() {
         // Production: use bundled sidecar binary
         Command::new(&sidecar_path)
     } else {
-        // Dev fallback: run Python provider from monorepo
-        let cwd = std::env::current_dir().unwrap_or_default();
-
-        let backend_path = [
-            cwd.join("backend").join("provider"),
-            cwd.parent().map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-            cwd.parent().and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-            exe_dir.parent().map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-            exe_dir.parent().and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-        ]
-        .into_iter()
-        .find(|p| p.exists() && p.is_dir())
-        .ok_or_else(|| {
-            "Provider daemon not found.             Install the Smainer node app from https://github.com/Smainer/smainer-desktop/releases             or run from the smainer monorepo in development mode.".to_string()
-        })?;
-
-        let python_cmd = if cfg!(target_os = "windows") { "python" } else { "python3" };
-        let mut py_cmd = Command::new(python_cmd);
-        py_cmd.current_dir(&backend_path);
-        py_cmd.arg("-m");
-        py_cmd.arg("provider.main");
-        py_cmd
+        // No sidecar and no environment override - return clear error
+        return Err("Provider sidecar not bundled in this build. Set SMAINER_PROVIDER_CMD to a provider executable, or run a release build produced by CI.".to_string());
     };
     
     // Pass args

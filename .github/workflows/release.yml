@@ -87,6 +87,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          configPath: src-tauri/tauri.release.windows.conf.json
           tagName: ${{ github.ref_name }}
           releaseName: Smainer ${{ github.ref_name }}
           releaseBody: |
@@ -100,3 +101,36 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: false
+
+  # Regression guard: test that local dev works without sidecar
+  test-local-dev:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Test local build without sidecar
+        run: npm run tauri build -- --bundles msi
+        
+      - name: Verify MSI was created
+        run: |
+          if (Test-Path "src-tauri/target/release/bundle/msi/*.msi") {
+            Write-Host "✓ MSI bundle created successfully without sidecar"
+            Get-ChildItem "src-tauri/target/release/bundle/msi/*.msi"
+          } else {
+            Write-Host "✗ MSI bundle failed to create"
+            exit 1
+          }

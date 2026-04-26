@@ -82,7 +82,10 @@
     "copyright": "Copyright © 2026 Smainer Team",
     "category": "DeveloperTool",
     "shortDescription": "Windows provider node onboarding application",
-    "longDescription": "A desktop application to easily set up and manage Smainer provider nodes on Windows systems"
+    "longDescription": "A desktop application to easily set up and manage Smainer provider nodes on Windows systems",
+    "externalBin": [
+      "binaries/smainer-provider"
+    ]
   },
   "plugins": {}
 }
