@@ -3,8 +3,6 @@ use tauri::{command, State};
 use anyhow::Result;
 use std::process::{Command, Stdio, Child};
 use std::sync::Mutex;
-use std::path::PathBuf;
-use tokio::time::{sleep, Duration};
 use crate::models::{ProviderStatus, NodeRegistration};
 
 // Global state managed by Tauri
@@ -152,7 +150,7 @@ pub async fn get_provider_status(state: State<'_, ProviderState>) -> Result<Prov
         }
     };
     
-    let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
+    let _relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
     
     // If running, query Relayer for detailed status
     if is_running {

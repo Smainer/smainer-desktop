@@ -1,11 +1,10 @@
 use serde::{Deserialize, Serialize};
 use tauri::command;
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::fs;
-use starknet::signers::{SigningKey, VerifyingKey, Signer};
+use starknet::signers::SigningKey;
 use starknet::core::types::FieldElement;
-use starknet::core::utils::get_contract_address;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalletInfo {
@@ -95,7 +94,7 @@ pub async fn get_wallet_address() -> Result<String, String> {
 }
 
 #[command]
-pub async fn sign_message(message: String, password: Option<String>) -> Result<SignatureResult, String> {
+pub async fn sign_message(message: String, _password: Option<String>) -> Result<SignatureResult, String> {
     tracing::info!("Signing message...");
     let path = get_wallet_path();
     if !path.exists() {

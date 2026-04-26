@@ -98,6 +98,7 @@ impl Default for NodeStatus {
     }
 }
 
+#[allow(dead_code)]
 impl EarningsData {
     pub fn total_earnings_dollars(&self) -> f64 {
         self.total_earnings as f64 / 100.0
@@ -112,6 +113,7 @@ impl EarningsData {
     }
 }
 
+#[allow(dead_code)]
 impl TaskHistoryEntry {
     pub fn is_completed(&self) -> bool {
         self.status == "completed"

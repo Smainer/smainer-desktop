@@ -3,8 +3,10 @@ use ring::{digest, pbkdf2, rand, aead};
 use ring::rand::SecureRandom;
 use base64::{Engine as _, engine::general_purpose};
 
+#[allow(dead_code)]
 pub struct CryptoUtils;
 
+#[allow(dead_code)]
 impl CryptoUtils {
     /// Generate a secure random 32-byte key
     pub fn generate_key() -> Result<Vec<u8>> {

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use crate::models::{NodeStatus, EarningsData, TaskHistoryEntry};
 use crate::commands::provider::ProviderState;
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NodeMetrics {
     pub cpu_usage: f64,

@@ -5,10 +5,12 @@ use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 use tracing::{info, warn, error};
 
+#[allow(dead_code)]
 pub struct ProcessManager {
     processes: Arc<Mutex<HashMap<String, Child>>>,
 }
 
+#[allow(dead_code)]
 impl ProcessManager {
     pub fn new() -> Self {
         Self {

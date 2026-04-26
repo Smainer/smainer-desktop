@@ -46,6 +46,7 @@ impl Default for HardwareInfo {
     }
 }
 
+#[allow(dead_code)]
 impl GpuInfo {
     pub fn is_nvidia(&self) -> bool {
         self.vendor.to_lowercase() == "nvidia"
@@ -60,6 +61,7 @@ impl GpuInfo {
     }
 }
 
+#[allow(dead_code)]
 impl HardwareInfo {
     pub fn total_ram_gb(&self) -> f64 {
         self.total_ram as f64 / (1024.0 * 1024.0 * 1024.0)

@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use tauri::command;
 use anyhow::Result;
 use crate::models::{HardwareInfo, GpuInfo, SystemRequirements};
-use std::process::Command;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SystemInfo {
@@ -80,8 +79,6 @@ fn detect_gpus_linux() -> Result<Vec<GpuInfo>> {
 #[cfg(target_os = "windows")]
 fn detect_gpus_windows() -> Result<Vec<GpuInfo>> {
     use windows::Win32::Graphics::Dxgi::*;
-    use windows::Win32::Graphics::Dxgi::Common::*;
-    use windows::Win32::Foundation::*;
     use windows::Win32::System::Com::*;
     
     let mut gpus = Vec::new();
