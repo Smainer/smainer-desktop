@@ -39,7 +39,7 @@ jobs:
           MONOREPO_TOKEN: ${{ secrets.MONOREPO_TOKEN }}
         run: |
           # Clone without checkout to avoid Windows-illegal filenames (#, etc.)
-          git clone --depth 1 --no-checkout `
+          git clone --depth 1 --no-checkout --single-branch `
             "https://x-access-token:$env:MONOREPO_TOKEN@github.com/Smainer/smainer-backend.git" `
             _backend
 
