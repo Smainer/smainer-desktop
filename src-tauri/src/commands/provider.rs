@@ -73,18 +73,24 @@ pub async fn start_provider(
         // Path to backend/provider/src/provider/main.py is ../../backend/provider/src/provider/main.py
         // Or run as module with python
         let root_dir = std::env::current_dir().unwrap_or_default();
-        let backend_path = root_dir.parent().unwrap().join("backend").join("provider");
+        let backend_path = root_dir
+            .parent()
+            .and_then(|p| p.parent())
+            .unwrap_or(&root_dir)
+            .join("backend")
+            .join("provider");
         
-        let mut py_cmd = Command::new("python3");
+        let python_cmd = if cfg!(target_os = "windows") { "python" } else { "python3" };
+        let mut py_cmd = Command::new(python_cmd);
         py_cmd.current_dir(&backend_path);
         py_cmd.arg("-m");
-        py_cmd.arg("src.provider.main"); // Needs correct module path relative to cwd
+        py_cmd.arg("provider.main");
         py_cmd
     };
     
     // Pass args
-    cmd.env("WALLET_ADDRESS", &config.wallet_address);
-    cmd.env("RELAYER_URL", &config.relayer_url);
+    cmd.env("STARKNET_ACCOUNT_ADDRESS", &config.wallet_address);
+    cmd.env("RELAYER_WS_URL", &config.relayer_url);
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
