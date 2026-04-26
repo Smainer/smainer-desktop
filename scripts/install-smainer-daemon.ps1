@@ -641,7 +641,8 @@ function Show-InstallationSummary {
     Write-Host "Next Steps:" -ForegroundColor Cyan
     Write-Host "  1. Test your configuration by checking the Smainer desktop app" -ForegroundColor White
     Write-Host "  2. Monitor logs in: $SMAINER_LOG" -ForegroundColor White
-    Write-Host "  3. Verify connection to relayer: $($Config.RelayerUrl)" -ForegroundColor White
+    $relayerUrl = $Config.RelayerUrl
+    Write-Host "  3. Verify connection to relayer: $relayerUrl" -ForegroundColor White
     Write-Host ""
     
     Write-Host "For uninstallation, run: .\uninstall-smainer-daemon.ps1" -ForegroundColor Yellow

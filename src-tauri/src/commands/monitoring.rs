@@ -113,6 +113,8 @@ pub async fn get_earnings() -> Result<EarningsData, String> {
         daily_earnings: HashMap::new(),
         monthly_earnings: HashMap::new(),
         pending_rewards: 0,
+        last_payout: None,
+        next_payout: None,
     })
 }
 

@@ -95,7 +95,8 @@ fn detect_gpus_windows() -> Result<Vec<GpuInfo>> {
         loop {
             match factory.EnumAdapters1(adapter_index) {
                 Ok(adapter) => {
-                    let desc = adapter.GetDesc1()?;
+                    let mut desc = std::mem::zeroed::<DXGI_ADAPTER_DESC1>();
+                    adapter.GetDesc1(&mut desc)?;
                     let name = String::from_utf16_lossy(&desc.Description);
                     let name = name.trim_end_matches('\0');
                     let memory = desc.DedicatedVideoMemory / (1024 * 1024);
@@ -153,6 +154,7 @@ pub async fn get_system_info() -> Result<SystemInfo, String> {
 
 #[command]
 pub async fn check_requirements() -> Result<SystemRequirements, String> {
+    let system_info = get_system_info().await?;
     Ok(SystemRequirements {
         meets_requirements: true,
         ram_ok: true,
@@ -160,6 +162,14 @@ pub async fn check_requirements() -> Result<SystemRequirements, String> {
         cpu_ok: true,
         warnings: vec![],
         errors: vec![],
-        system_info: get_system_info().await?,
+        system_info: HardwareInfo {
+            cpu_name: system_info.cpu_name,
+            cpu_cores: system_info.cpu_cores,
+            total_ram: system_info.total_ram,
+            available_ram: system_info.available_ram,
+            gpus: system_info.gpus,
+            os: system_info.os,
+            os_version: system_info.os_version,
+        },
     })
 }
