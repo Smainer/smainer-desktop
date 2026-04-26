@@ -40,17 +40,36 @@ The app will start in development mode. When you click **Start Node**, you'll se
 
 ### Provider Override (Optional)
 
-To test with a real provider, set these environment variables before running `npm run tauri dev`:
+You only need this section if you want **Start Node** to launch a real local provider daemon while running `npm run tauri dev`.
+
+A "real provider" means the actual Python provider from the `smainer-backend` repository, or a standalone `smainer-provider.exe` built from it. If you only want to work on the desktop UI, you can ignore this section.
+
+#### Option A: Run the Python provider from a local `smainer-backend` clone
+
+Example setup:
+
+- `python.exe` = the Python interpreter that has the backend provider dependencies installed.
+  Example: `C:\Users\you\code\smainer-backend\.venv\Scripts\python.exe`
+- `SMAINER_PROVIDER_CWD` = the `provider` folder inside your local `smainer-backend` clone.
+  Example: `C:\Users\you\code\smainer-backend\provider`
 
 ```powershell
-# Use Python provider from backend clone
-$env:SMAINER_PROVIDER_CMD = "C:\path\to\python.exe"
-$env:SMAINER_PROVIDER_ARGS = '["-m","src.provider.main"]'  
-$env:SMAINER_PROVIDER_CWD = "C:\path\to\smainer-backend\provider"
-
-# Or use a standalone binary
-$env:SMAINER_PROVIDER_CMD = "C:\path\to\smainer-provider.exe"
+$env:SMAINER_PROVIDER_CMD = "C:\Users\you\code\smainer-backend\.venv\Scripts\python.exe"
+$env:SMAINER_PROVIDER_ARGS = '["-m","src.provider.main"]'
+$env:SMAINER_PROVIDER_CWD = "C:\Users\you\code\smainer-backend\provider"
+npm run tauri dev
 ```
+
+#### Option B: Run a standalone provider binary
+
+If you already have a built `smainer-provider.exe`, point the desktop app to it directly:
+
+```powershell
+$env:SMAINER_PROVIDER_CMD = "C:\Users\you\Downloads\smainer-provider.exe"
+npm run tauri dev
+```
+
+If you do not have `smainer-backend` cloned and you do not have a standalone provider binary, skip this section and use the CI-built desktop installer instead.
 
 ### Build MSI Locally
 
