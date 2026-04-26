@@ -38,16 +38,16 @@ jobs:
         env:
           MONOREPO_TOKEN: ${{ secrets.MONOREPO_TOKEN }}
         run: |
-          # Clone monorepo (shallow) using PAT
+          # Clone smainer-backend (shallow) — provider lives here
           git clone --depth 1 `
-            "https://x-access-token:$env:MONOREPO_TOKEN@github.com/Smainer/smainer.git" `
-            _monorepo
+            "https://x-access-token:$env:MONOREPO_TOKEN@github.com/Smainer/smainer-backend.git" `
+            _backend
 
-          # Verify the file exists before proceeding
-          $mainPy = "_monorepo\backend\provider\src\provider\main.py"
+          # Verify
+          $mainPy = "_backend\provider\src\provider\main.py"
           if (-not (Test-Path $mainPy)) {
             Write-Error "Provider main.py not found at $mainPy"
-            Get-ChildItem _monorepo\backend -Recurse -Name | Select-Object -First 30
+            Get-ChildItem _backend -Recurse -Name | Select-Object -First 40
             exit 1
           }
           Write-Host "Found: $mainPy"
