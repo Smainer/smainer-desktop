@@ -53,68 +53,67 @@ export default function EarningsCard() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Earnings</span>
-          <span className="text-2xl">💰</span>
         </CardTitle>
         <CardDescription>Your provider node earnings</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Total Earnings */}
-        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-          <div className="text-3xl font-bold text-green-600">
+        <div className="text-center p-4 bg-card rounded-lg border border-primary/20">
+          <div className="text-3xl font-bold text-primary">
             {formatCurrency(earnings?.total_earnings || 0)}
           </div>
-          <div className="text-sm text-green-700 mt-1">Total Earned</div>
+          <div className="text-sm text-muted-foreground mt-1">Total Earned</div>
         </div>
 
         {/* Today's Earnings */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-card rounded-lg">
           <div>
-            <div className="font-semibold">{formatCurrency(earnings?.today_earnings || 0)}</div>
-            <div className="text-sm text-gray-600">Today</div>
+            <div className="font-semibold text-primary">{formatCurrency(earnings?.today_earnings || 0)}</div>
+            <div className="text-sm text-muted-foreground">Today</div>
           </div>
           <div className={`text-sm font-medium ${
-            todayChange >= 0 ? 'text-green-600' : 'text-red-600'
+            todayChange >= 0 ? 'text-primary' : 'text-destructive'
           }`}>
             {todayChange >= 0 ? '↗' : '↘'} {Math.abs(todayChange).toFixed(1)}%
           </div>
         </div>
 
         {/* Weekly Earnings */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-card rounded-lg">
           <div>
-            <div className="font-semibold">{formatCurrency(earnings?.this_week_earnings || 0)}</div>
-            <div className="text-sm text-gray-600">This Week</div>
+            <div className="font-semibold text-primary">{formatCurrency(earnings?.this_week_earnings || 0)}</div>
+            <div className="text-sm text-muted-foreground">This Week</div>
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {formatCurrency((earnings?.this_week_earnings || 0) / 7)} avg/day
           </div>
         </div>
 
         {/* Monthly Earnings */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-3 bg-card rounded-lg">
           <div>
-            <div className="font-semibold">{formatCurrency(earnings?.this_month_earnings || 0)}</div>
-            <div className="text-sm text-gray-600">This Month</div>
+            <div className="font-semibold text-primary">{formatCurrency(earnings?.this_month_earnings || 0)}</div>
+            <div className="text-sm text-muted-foreground">This Month</div>
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {formatCurrency((earnings?.this_month_earnings || 0) / 30)} avg/day
           </div>
         </div>
 
         {/* Pending Rewards */}
         {(earnings?.pending_rewards || 0) > 0 && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="p-3 bg-card border border-primary/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold text-yellow-800">
+                <div className="font-semibold text-primary">
                   {formatCurrency(earnings?.pending_rewards || 0)}
                 </div>
-                <div className="text-sm text-yellow-600">Pending Payout</div>
+                <div className="text-sm text-muted-foreground">Pending Payout</div>
               </div>
-              <div className="text-yellow-600">⏳</div>
+              <div className="text-primary">Pending</div>
             </div>
             {earnings?.next_payout && (
-              <div className="text-xs text-yellow-600 mt-2">
+              <div className="text-xs text-muted-foreground mt-2">
                 Next payout: {new Date(earnings.next_payout).toLocaleDateString()}
               </div>
             )}

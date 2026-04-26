@@ -102,14 +102,14 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
           onClick={() => setMode('generate')}
           className="flex-1"
         >
-          🎲 Generate New Wallet
+          Generate New Wallet
         </Button>
         <Button
           variant={mode === 'import' ? 'default' : 'outline'}
           onClick={() => setMode('import')}
           className="flex-1"
         >
-          📥 Import Existing Wallet
+          Import Existing Wallet
         </Button>
       </div>
 
@@ -124,7 +124,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
           <CardContent className="space-y-4">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex items-start space-x-2">
-                <span className="text-yellow-600 mt-0.5">⚠️</span>
+                <span className="text-destructive mt-0.5">Warning</span>
                 <div className="text-sm text-yellow-800">
                   <strong>Important:</strong> Make sure to backup your private key after generation. 
                   Store it securely - if you lose it, you'll lose access to your wallet and earnings.

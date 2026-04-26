@@ -18,18 +18,18 @@ interface TaskHistoryEntry {
   error_message?: string
 }
 
-const taskTypeEmoji = {
-  image_generation: '🎨',
-  text_processing: '📝',
-  model_training: '🧠',
-  data_analysis: '📊',
+const taskTypeLabels = {
+  image_generation: 'Image',
+  text_processing: 'Text', 
+  model_training: 'Training',
+  data_analysis: 'Analysis',
 }
 
 const statusColors = {
-  pending: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-  running: 'text-blue-600 bg-blue-50 border-blue-200',
-  completed: 'text-green-600 bg-green-50 border-green-200',
-  failed: 'text-red-600 bg-red-50 border-red-200',
+  pending: 'text-muted-foreground bg-card border-border',
+  running: 'text-primary bg-card border-primary/20',
+  completed: 'text-primary bg-card border-primary/20',
+  failed: 'text-destructive bg-card border-destructive/20',
 }
 
 export default function TaskHistory() {
@@ -114,7 +114,7 @@ export default function TaskHistory() {
       </CardHeader>
       <CardContent>
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             {filter === 'all' ? 'No tasks yet' : `No ${filter} tasks`}
           </div>
         ) : (
@@ -122,16 +122,16 @@ export default function TaskHistory() {
             {filteredTasks.map((task) => (
               <div
                 key={task.task_id}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="border rounded-lg p-4 hover:bg-card transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <span className="text-2xl">
-                      {taskTypeEmoji[task.task_type as keyof typeof taskTypeEmoji] || '⚙️'}
+                    <span className="text-sm font-medium text-primary px-2 py-1 bg-card rounded">
+                      {taskTypeLabels[task.task_type as keyof typeof taskTypeLabels] || 'Task'}
                     </span>
                     <div>
                       <div className="font-medium text-sm">{task.task_id}</div>
-                      <div className="text-xs text-gray-500 capitalize">
+                      <div className="text-xs text-muted-foreground capitalize">
                         {task.task_type.replace('_', ' ')}
                         {task.gpu_used && ' • GPU'}
                       </div>

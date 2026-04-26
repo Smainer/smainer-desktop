@@ -92,7 +92,7 @@ function AppContent() {
       <div className="min-h-screen bg-void">
         <div className="container mx-auto px-6 py-8">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4 font-mono tracking-tight">Smainer Desktop</h1>
+            <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">Smainer Desktop</h1>
             <p className="text-lg text-zinc-400">Set up your provider node in minutes</p>
           </div>
 

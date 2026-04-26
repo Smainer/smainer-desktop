@@ -56,7 +56,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
-              {requirements?.cpu_ok ? '✅' : '⚠️'} CPU
+              {requirements?.cpu_ok ? 'OK' : 'Warning'} CPU
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -72,7 +72,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
-              {requirements?.ram_ok ? '✅' : '❌'} Memory
+              {requirements?.ram_ok ? 'OK' : 'Error'} Memory
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -91,7 +91,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
-              {requirements?.gpu_ok ? '✅' : '❌'} GPU
+              {requirements?.gpu_ok ? 'OK' : 'Error'} GPU
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -121,7 +121,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
           {requirements.errors.length > 0 && (
             <Card className="border-red-200 bg-red-50">
               <CardHeader>
-                <CardTitle className="text-red-800">❌ Critical Issues</CardTitle>
+                <CardTitle className="text-destructive">Critical Issues</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc list-inside space-y-1">
@@ -136,7 +136,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
           {requirements.warnings.length > 0 && (
             <Card className="border-yellow-200 bg-yellow-50">
               <CardHeader>
-                <CardTitle className="text-yellow-800">⚠️ Recommendations</CardTitle>
+                <CardTitle className="text-muted-foreground">Recommendations</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc list-inside space-y-1">
@@ -158,7 +158,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
       }`}>
         <CardHeader>
           <CardTitle className={requirements?.meets_requirements ? 'text-green-800' : 'text-red-800'}>
-            {requirements?.meets_requirements ? '🎉 System Ready!' : '⚠️ System Issues Detected'}
+            {requirements?.meets_requirements ? 'System Ready!' : 'System Issues Detected'}
           </CardTitle>
           <CardDescription>
             {requirements?.meets_requirements 

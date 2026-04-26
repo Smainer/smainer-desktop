@@ -167,11 +167,11 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Button variant="outline" onClick={handleExportLogs}>
-              📥 Export Logs
+              Export Logs
             </Button>
             
             <Button variant="outline" onClick={handleExportWallet}>
-              🔑 Export Wallet
+              Export Wallet
             </Button>
           </div>
           
@@ -184,7 +184,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
               onClick={handleResetSettings}
               className="w-full"
             >
-              🔄 Reset All Settings
+              Reset All Settings
             </Button>
           </div>
         </CardContent>

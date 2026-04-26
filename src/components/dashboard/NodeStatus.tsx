@@ -67,23 +67,23 @@ export default function NodeStatus({ status }: NodeStatusProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{uptimeHours}h {uptimeMinutes}m</div>
-              <div className="text-xs text-gray-600">Uptime</div>
+            <div className="text-center p-3 bg-card rounded-lg">
+              <div className="text-2xl font-bold text-primary">{uptimeHours}h {uptimeMinutes}m</div>
+              <div className="text-xs text-muted-foreground">Uptime</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{status?.tasks_completed_today || 0}</div>
-              <div className="text-xs text-gray-600">Tasks Today</div>
+            <div className="text-center p-3 bg-card rounded-lg">
+              <div className="text-2xl font-bold text-primary">{status?.tasks_completed_today || 0}</div>
+              <div className="text-xs text-muted-foreground">Tasks Today</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{status?.tasks_active || 0}</div>
-              <div className="text-xs text-gray-600">Active Tasks</div>
+            <div className="text-center p-3 bg-card rounded-lg">
+              <div className="text-2xl font-bold text-primary">{status?.tasks_active || 0}</div>
+              <div className="text-xs text-muted-foreground">Active Tasks</div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">
-                {status?.relayer_connected ? '🟢' : '🔴'}
+            <div className="text-center p-3 bg-card rounded-lg">
+              <div className="text-2xl font-bold text-primary">
+                {status?.relayer_connected ? 'Online' : 'Offline'}
               </div>
-              <div className="text-xs text-gray-600">Relayer</div>
+              <div className="text-xs text-muted-foreground">Relayer</div>
             </div>
           </div>
         </CardContent>
@@ -102,9 +102,9 @@ export default function NodeStatus({ status }: NodeStatusProps) {
                 <span>CPU Usage</span>
                 <span>{(status?.cpu_usage || 0).toFixed(1)}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-secondary rounded-full h-2">
                 <div 
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${status?.cpu_usage || 0}%` }}
                 />
               </div>
@@ -115,9 +115,9 @@ export default function NodeStatus({ status }: NodeStatusProps) {
                 <span>Memory Usage</span>
                 <span>{(status?.memory_usage || 0).toFixed(1)}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-secondary rounded-full h-2">
                 <div 
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${status?.memory_usage || 0}%` }}
                 />
               </div>
@@ -129,9 +129,9 @@ export default function NodeStatus({ status }: NodeStatusProps) {
                   <span>GPU Usage</span>
                   <span>{status.gpu_usage.toFixed(1)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-secondary rounded-full h-2">
                   <div 
-                    className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
                     style={{ width: `${status.gpu_usage}%` }}
                   />
                 </div>
@@ -148,21 +148,21 @@ export default function NodeStatus({ status }: NodeStatusProps) {
             <CardTitle>Node Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-4 text-sm">
               <div>
-                <span className="font-medium text-gray-600">Node ID:</span>
-                <p className="font-mono mt-1">{status.node_id}</p>
+                <span className="font-medium text-muted-foreground">Node ID:</span>
+                <p className="font-mono mt-1 break-all">{status.node_id}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Version:</span>
+                <span className="font-medium text-muted-foreground">Version:</span>
                 <p className="mt-1">{status.provider_version}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Tier:</span>
+                <span className="font-medium text-muted-foreground">Tier:</span>
                 <p className="mt-1 capitalize">{status.node_tier}</p>
               </div>
               <div>
-                <span className="font-medium text-gray-600">Network Status:</span>
+                <span className="font-medium text-muted-foreground">Network Status:</span>
                 <p className="mt-1 capitalize">{status.network_status}</p>
               </div>
             </div>

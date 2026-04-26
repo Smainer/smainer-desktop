@@ -43,7 +43,7 @@ export default function HardwareConfig() {
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefresh}>
-            🔄 Refresh
+            Refresh
           </Button>
         </div>
       </CardHeader>
@@ -83,8 +83,8 @@ export default function HardwareConfig() {
                   : 'bg-red-50 border-red-200 text-red-700'
               }`}>
                 {requirements?.meets_requirements 
-                  ? '✅ System meets all requirements'
-                  : '❌ System has compatibility issues'
+                  ? 'System meets all requirements'
+                  : 'System has compatibility issues'
                 }
               </div>
             </div>
@@ -152,7 +152,7 @@ export default function HardwareConfig() {
           <div className="space-y-3">
             {requirements.errors.length > 0 && (
               <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
-                <div className="font-medium text-red-800 mb-2">❌ Critical Issues</div>
+                <div className="font-medium text-destructive mb-2">Critical Issues</div>
                 <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
                   {requirements.errors.map((error, idx) => (
                     <li key={idx}>{error}</li>
@@ -163,7 +163,7 @@ export default function HardwareConfig() {
             
             {requirements.warnings.length > 0 && (
               <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-                <div className="font-medium text-yellow-800 mb-2">⚠️ Recommendations</div>
+                <div className="font-medium text-muted-foreground mb-2">Recommendations</div>
                 <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
                   {requirements.warnings.map((warning, idx) => (
                     <li key={idx}>{warning}</li>
@@ -176,7 +176,7 @@ export default function HardwareConfig() {
 
         {/* Hardware Optimization Tips */}
         <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
-          <div className="font-medium text-blue-800 mb-2">💡 Optimization Tips</div>
+          <div className="font-medium text-primary mb-2">Optimization Tips</div>
           <ul className="list-disc list-inside space-y-1 text-sm text-blue-700">
             <li>Close unnecessary applications to free up RAM and GPU resources</li>
             <li>Ensure GPU drivers are up to date for best compatibility</li>

@@ -61,7 +61,7 @@ export default function NodeRegistration({
 
       <Card className="bg-blue-50 border-blue-200">
         <CardHeader>
-          <CardTitle className="text-blue-800">🚀 Your Node Overview</CardTitle>
+          <CardTitle className="text-primary">Your Node Overview</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -74,9 +74,9 @@ export default function NodeRegistration({
             <div>
               <span className="text-gray-600">System Specs:</span>
               <ul className="mt-1 space-y-1 text-xs">
-                <li>💾 {ramGB}GB RAM, {hardwareInfo?.cpu_cores} CPU cores</li>
-                <li>🎮 {supportedGpus.length} GPU(s), {Math.round(totalVram / 1024)}GB VRAM</li>
-                <li>💻 {hardwareInfo?.os} {hardwareInfo?.os_version}</li>
+                <li>{ramGB}GB RAM, {hardwareInfo?.cpu_cores} CPU cores</li>
+                <li>{supportedGpus.length} GPU(s), {Math.round(totalVram / 1024)}GB VRAM</li>
+                <li>{hardwareInfo?.os} {hardwareInfo?.os_version}</li>
               </ul>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function NodeRegistration({
 
       <Card className="bg-green-50 border-green-200">
         <CardHeader>
-          <CardTitle className="text-green-800">💰 Earning Potential</CardTitle>
+          <CardTitle className="text-primary">Earning Potential</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-green-700">

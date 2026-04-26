@@ -11,8 +11,8 @@
   --zinc-900: #18181B;
   --zinc-400: #A1A1AA;
   
-  /* Typography - monospace for technical feel */
-  font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, 'Liberation Mono', Menlo, monospace;
+  /* Typography - Inter/system sans for professional feel */
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 

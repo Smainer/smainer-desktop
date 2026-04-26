@@ -12,11 +12,6 @@ interface SmainerLogoProps {
  * Modular compute blocks forming a distributed 'S' protocol.
  * Each block represents an independent compute node in the network.
  * Engineered for scalability from 24px to massive displays.
- * 
- * Complies with Meeting Minutes constraints:
- * - NO gradients
- * - Maximum 3 brand colors: void (#09090B), white (#FFFFFF), electric blue (#3B82F6)
- * - WCAG AA contrast compliance
  */
 export function SmainerLogo({ size = 32, className = '', variant = 'full' }: SmainerLogoProps) {
   // Color variants for different use cases
@@ -39,6 +34,7 @@ export function SmainerLogo({ size = 32, className = '', variant = 'full' }: Sma
   };
 
   const colorSet = colors[variant];
+  const scale = size / 512; // SVG is designed at 512x512
 
   return (
     <svg 
@@ -51,9 +47,7 @@ export function SmainerLogo({ size = 32, className = '', variant = 'full' }: Sma
       aria-label="Smainer distributed compute blocks forming modular S protocol"
     >
       {/* Background container - rounded for modern feel */}
-      {variant === 'full' && (
-        <rect width="512" height="512" rx="96" fill={colorSet.background}/>
-      )}
+      <rect width="512" height="512" rx="96" fill={colorSet.background}/>
       
       {/* Distributed compute blocks arranged in S formation */}
       {/* Top row */}
