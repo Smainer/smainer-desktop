@@ -87,7 +87,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          configPath: src-tauri/tauri.release.windows.conf.json
+          args: --config src-tauri/tauri.release.windows.conf.json
           tagName: ${{ github.ref_name }}
           releaseName: Smainer ${{ github.ref_name }}
           releaseBody: |
