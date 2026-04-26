@@ -61,35 +61,36 @@ pub async fn start_provider(
     // In strict production, this would be a bundled binary
     // In dev, we can try to find the python script
     
-    // Try to find smainer-provider binary first (bundled)
-    let binary_path = if cfg!(target_os = "windows") { "smainer-provider.exe" } else { "smainer-provider" };
-    
-    // Command construction
-    let mut cmd = if std::path::Path::new(binary_path).exists() {
-        Command::new(binary_path)
-    } else {
-        // Dev fallback: locate backend/provider relative to cwd or exe location
-        let cwd = std::env::current_dir().unwrap_or_default();
-        let exe_dir = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-            .unwrap_or_default();
+    // Resolve exe directory (works in both dev and installed app)
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_default();
 
-        // Candidates: walk up from cwd and exe_dir looking for backend/provider
-        let candidates: Vec<std::path::PathBuf> = vec![
+    // 1. Bundled sidecar next to the app exe (production install path)
+    let sidecar_name = if cfg!(target_os = "windows") { "smainer-provider.exe" } else { "smainer-provider" };
+    let sidecar_path = exe_dir.join(sidecar_name);
+
+    // Command construction
+    let mut cmd = if sidecar_path.exists() {
+        // Production: use bundled sidecar binary
+        Command::new(&sidecar_path)
+    } else {
+        // Dev fallback: run Python provider from monorepo
+        let cwd = std::env::current_dir().unwrap_or_default();
+
+        let backend_path = [
             cwd.join("backend").join("provider"),
             cwd.parent().map(|p| p.join("backend").join("provider")).unwrap_or_default(),
             cwd.parent().and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-            exe_dir.join("backend").join("provider"),
             exe_dir.parent().map(|p| p.join("backend").join("provider")).unwrap_or_default(),
             exe_dir.parent().and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-            exe_dir.parent().and_then(|p| p.parent()).and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
-        ];
-
-        let backend_path = candidates
-            .into_iter()
-            .find(|p| p.exists() && p.is_dir())
-            .ok_or_else(|| "Provider backend not found. Download the full Smainer package from https://github.com/Smainer/smainer-desktop/releases".to_string())?;
+        ]
+        .into_iter()
+        .find(|p| p.exists() && p.is_dir())
+        .ok_or_else(|| {
+            "Provider daemon not found.             Install the Smainer node app from https://github.com/Smainer/smainer-desktop/releases             or run from the smainer monorepo in development mode.".to_string()
+        })?;
 
         let python_cmd = if cfg!(target_os = "windows") { "python" } else { "python3" };
         let mut py_cmd = Command::new(python_cmd);

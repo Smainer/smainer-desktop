@@ -28,6 +28,42 @@ jobs:
         with:
           workspaces: src-tauri
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build provider sidecar
+        shell: pwsh
+        run: |
+          # Clone only the provider source from smainer monorepo
+          git clone --depth 1 --filter=blob:none --sparse `
+            https://github.com/Smainer/smainer.git _monorepo
+          cd _monorepo
+          git sparse-checkout set backend/provider
+          cd ..
+
+          # Install provider dependencies + PyInstaller
+          pip install pyinstaller websockets psutil starknet-py aiohttp
+
+          # Build standalone exe
+          pyinstaller `
+            --onefile `
+            --name smainer-provider `
+            --distpath dist-provider `
+            --hidden-import=provider `
+            --hidden-import=provider.main `
+            --hidden-import=websockets `
+            --hidden-import=psutil `
+            _monorepo/backend/provider/src/provider/main.py
+
+          # Place in Tauri sidecar location with target triple
+          New-Item -ItemType Directory -Force -Path src-tauri\binaries
+          Copy-Item dist-provider\smainer-provider.exe `
+            src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe
+
+          Write-Host "Sidecar built: $(Get-Item src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe | Select-Object -ExpandProperty Length) bytes"
+
       - name: Install frontend deps
         run: npm ci
 
@@ -41,17 +77,11 @@ jobs:
           releaseBody: |
             ## Download
 
-            | File | Description |
-            |------|-------------|
-            | `Smainer_*_x64-setup.exe` | **Windows installer — click to install** |
-            | `Smainer_*_x64_en-US.msi` | Windows MSI (enterprise/IT) |
+            **[⬇ Smainer-setup.exe](https://github.com/Smainer/smainer-desktop/releases/latest/download/Smainer_0.1.0_x64-setup.exe)**
 
-            ### What's included
-            - One-click installer (no admin required)
-            - Automatic node registration
-            - Real-time dashboard
+            Double-click → Next → Install → Done. No command line, no admin needed.
 
-            **Just download → double-click → done.**
+            Includes the provider daemon — just click **Start Node** after install.
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: false
