@@ -20,19 +20,25 @@ export default function NodeStatus({ status }: NodeStatusProps) {
     refetchInterval: 5000,
   })
 
-  const handleToggleProvider = () => {
+  const handleToggleProvider = async () => {
     if (status?.is_online) {
       stopProvider.mutate()
     } else {
-      // Start with basic config
-      startProvider.mutate({
-        wallet_address: 'mock_address',
-        relayer_url: 'https://api.smainer.io',
-        port: 8080,
-        max_tasks: 10,
-        gpu_enabled: true,
-        auto_start: false,
-      })
+      // Get actual wallet address before starting
+      try {
+        const walletAddress = await invoke('get_wallet_address')
+        startProvider.mutate({
+          wallet_address: walletAddress as string,
+          relayer_url: 'https://api.smainer.io',
+          port: 8080,
+          max_tasks: 10,
+          gpu_enabled: true,
+          auto_start: false,
+        })
+      } catch (error) {
+        console.error('Failed to get wallet address:', error)
+        // TODO: Show user-friendly error in UI
+      }
     }
   }
 
@@ -49,7 +55,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
               <CardTitle className="flex items-center space-x-2">
                 <span>Node Status</span>
                 <div className={`w-3 h-3 rounded-full ${
-                  status?.is_online ? 'bg-green-500' : 'bg-red-500'
+                  status?.is_online ? 'bg-primary' : 'bg-destructive'
                 }`} />
               </CardTitle>
               <CardDescription>
@@ -148,22 +154,26 @@ export default function NodeStatus({ status }: NodeStatusProps) {
             <CardTitle>Node Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 text-sm">
-              <div>
-                <span className="font-medium text-muted-foreground">Node ID:</span>
-                <p className="font-mono mt-1 break-all">{status.node_id}</p>
+            <div className="space-y-6 text-sm">
+              <div className="space-y-2">
+                <div className="font-medium text-muted-foreground">Node ID:</div>
+                <div className="font-mono text-xs break-all bg-muted p-3 rounded-lg border">
+                  {status.node_id}
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-muted-foreground">Version:</span>
-                <p className="mt-1">{status.provider_version}</p>
-              </div>
-              <div>
-                <span className="font-medium text-muted-foreground">Tier:</span>
-                <p className="mt-1 capitalize">{status.node_tier}</p>
-              </div>
-              <div>
-                <span className="font-medium text-muted-foreground">Network Status:</span>
-                <p className="mt-1 capitalize">{status.network_status}</p>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1">
+                  <div className="font-medium text-muted-foreground">Version:</div>
+                  <div>{status.provider_version}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="font-medium text-muted-foreground">Tier:</div>
+                  <div className="capitalize">{status.node_tier}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="font-medium text-muted-foreground">Network Status:</div>
+                  <div className="capitalize">{status.network_status}</div>
+                </div>
               </div>
             </div>
           </CardContent>

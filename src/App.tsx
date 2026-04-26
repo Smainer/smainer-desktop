@@ -133,7 +133,7 @@ function AppContent() {
                             </svg>
                           )}
                         </div>
-                        <span className="font-medium font-mono tracking-tight">{title}</span>
+                        <span className="font-medium tracking-tight">{title}</span>
                       </div>
                     );
                   })}
@@ -174,25 +174,25 @@ function AppContent() {
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-4">
                 <SmainerLogo size={36} variant="white" />
-                <h1 className="text-2xl font-bold text-white font-mono tracking-tight">Smainer Desktop</h1>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Smainer Desktop</h1>
               </div>
               <div className="flex items-center space-x-3">
                 <div className={'w-3 h-3 rounded-full ' + (nodeStatus?.is_online ? 'bg-primary' : 'bg-destructive')} />
-                <span className="text-sm text-zinc-400 font-mono">
+                <span className="text-sm text-muted-foreground">
                   {nodeStatus?.is_online ? 'Online' : 'Offline'}
                 </span>
               </div>
             </div>
             <div className="flex items-center space-x-6">
               <div className="text-right">
-                <div className="text-sm text-zinc-400 font-mono">Today's Earnings</div>
-                <div className="text-lg font-bold text-primary font-mono">
+                <div className="text-sm text-muted-foreground">Today's Earnings</div>
+                <div className="text-lg font-bold text-primary">
                   ${((nodeStatus?.earnings_today || 0) / 100).toFixed(2)}
                 </div>
               </div>
               <button
                 onClick={resetOnboarding}
-                className="px-4 py-2 text-sm text-zinc-400 hover:text-white border border-zinc-800 rounded-lg hover:bg-zinc-800 font-mono tracking-tight"
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-white border border-border rounded-lg hover:bg-accent tracking-tight"
               >
                 Reset Setup
               </button>
@@ -204,9 +204,9 @@ function AppContent() {
       <div className="container mx-auto px-6 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800">
-            <TabsTrigger value="dashboard" className="font-mono">Dashboard</TabsTrigger>
-            <TabsTrigger value="tasks" className="font-mono">Tasks</TabsTrigger>
-            <TabsTrigger value="settings" className="font-mono">Settings</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-8 mt-8">

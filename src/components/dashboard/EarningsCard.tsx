@@ -31,11 +31,11 @@ export default function EarningsCard() {
         </CardHeader>
         <CardContent>
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="h-8 bg-card rounded mb-4"></div>
             <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-card rounded"></div>
+              <div className="h-4 bg-card rounded"></div>
+              <div className="h-4 bg-card rounded"></div>
             </div>
           </div>
         </CardContent>
@@ -122,7 +122,7 @@ export default function EarningsCard() {
 
         {/* Last Week Performance */}
         <div className="pt-4 border-t">
-          <div className="text-sm font-medium text-gray-700 mb-2">Last 7 Days</div>
+          <div className="text-sm font-medium text-muted-foreground mb-2">Last 7 Days</div>
           <div className="flex justify-between items-end h-12 space-x-1">
             {Array.from({ length: 7 }, (_, i) => {
               const date = new Date()
@@ -135,11 +135,11 @@ export default function EarningsCard() {
               return (
                 <div key={i} className="flex flex-col items-center flex-1">
                   <div 
-                    className="w-full bg-blue-200 rounded-t min-h-[2px] transition-all duration-300"
+                    className="w-full bg-primary/20 rounded-t min-h-[2px] transition-all duration-300"
                     style={{ height: `${Math.max(height, 8)}%` }}
                     title={`${date.toLocaleDateString()}: ${formatCurrency(earning)}`}
                   />
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {date.toLocaleDateString('en', { weekday: 'narrow' })}
                   </div>
                 </div>

@@ -54,25 +54,25 @@ export default function NodeRegistration({
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-4">Register Your Node</h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Register your provider node with the Smainer network to start earning.
         </p>
       </div>
 
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-primary">Your Node Overview</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-600">Wallet Address:</span>
+              <span className="text-muted-foreground">Wallet Address:</span>
               <p className="font-mono text-xs mt-1 bg-white p-2 rounded border">
                 {walletAddress}
               </p>
             </div>
             <div>
-              <span className="text-gray-600">System Specs:</span>
+              <span className="text-muted-foreground">System Specs:</span>
               <ul className="mt-1 space-y-1 text-xs">
                 <li>{ramGB}GB RAM, {hardwareInfo?.cpu_cores} CPU cores</li>
                 <li>{supportedGpus.length} GPU(s), {Math.round(totalVram / 1024)}GB VRAM</li>
@@ -83,12 +83,12 @@ export default function NodeRegistration({
           
           {supportedGpus.length > 0 && (
             <div>
-              <span className="text-gray-600 block mb-2">Available GPUs:</span>
+              <span className="text-muted-foreground block mb-2">Available GPUs:</span>
               <div className="space-y-1">
                 {supportedGpus.map((gpu, idx) => (
                   <div key={idx} className="bg-white p-2 rounded border text-xs">
                     <span className="font-medium">{gpu.name}</span>
-                    <span className="text-gray-500 ml-2">
+                    <span className="text-muted-foreground ml-2">
                       {Math.round(gpu.memory / 1024)}GB VRAM
                     </span>
                   </div>
@@ -118,7 +118,7 @@ export default function NodeRegistration({
               placeholder="https://api.smainer.io"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               URL of the Smainer relayer service. Use http://localhost:8000 for local development.
             </p>
           </div>
@@ -134,7 +134,7 @@ export default function NodeRegistration({
               placeholder="My Smainer Node"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               A friendly name for your node to help identify it.
             </p>
           </div>
@@ -150,7 +150,7 @@ export default function NodeRegistration({
               placeholder="your.email@example.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Optional email for node operator communications.
             </p>
           </div>
@@ -163,19 +163,19 @@ export default function NodeRegistration({
               onChange={(e) => setAutoStart(e.target.checked)}
               className="rounded"
             />
-            <label htmlFor="autoStart" className="text-sm text-gray-700">
+            <label htmlFor="autoStart" className="text-sm text-muted-foreground">
               Start provider automatically after registration
             </label>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-green-50 border-green-200">
+      <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-primary">Earning Potential</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-green-700">
+          <div className="text-sm text-muted-foreground">
             <p className="mb-2">
               Based on your hardware configuration, you can expect:
             </p>
@@ -184,7 +184,7 @@ export default function NodeRegistration({
               <li>~$0.10-$0.50 per hour (CPU/memory tasks)</li>
               <li>Higher earnings during peak demand periods</li>
             </ul>
-            <p className="text-xs mt-3 text-green-600">
+            <p className="text-xs mt-3 text-muted-foreground">
               * Estimates based on current network activity. Actual earnings may vary.
             </p>
           </div>
@@ -202,7 +202,7 @@ export default function NodeRegistration({
         >
           {registerNode.isPending ? (
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span>Registering Node...</span>
             </div>
           ) : (

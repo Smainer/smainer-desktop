@@ -62,7 +62,7 @@ export default function TaskHistory() {
         <CardContent>
           <div className="animate-pulse space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-card rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -77,7 +77,7 @@ export default function TaskHistory() {
           <CardTitle>Task History</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-red-600">
+          <div className="text-center text-destructive">
             Failed to load task history. Please try again.
           </div>
         </CardContent>
@@ -94,7 +94,7 @@ export default function TaskHistory() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring"
             >
               <option value="all">All Tasks</option>
               <option value="running">Running</option>
@@ -142,7 +142,7 @@ export default function TaskHistory() {
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium border ${
                         statusColors[task.status as keyof typeof statusColors] || 
-                        'text-gray-600 bg-gray-50 border-gray-200'
+                        'text-muted-foreground bg-muted border-border'
                       }`}
                     >
                       {task.status}
@@ -150,7 +150,7 @@ export default function TaskHistory() {
                     
                     {task.reward && (
                       <div className="text-right">
-                        <div className="font-semibold text-green-600">
+                        <div className="font-semibold text-primary">
                           {formatCurrency(task.reward)}
                         </div>
                       </div>
@@ -158,7 +158,7 @@ export default function TaskHistory() {
                   </div>
                 </div>
                 
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-600">
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-muted-foreground">
                   <div>
                     <span className="font-medium">Submitted:</span>
                     <div>{new Date(task.submitted_at).toLocaleString()}</div>
@@ -187,7 +187,7 @@ export default function TaskHistory() {
                 </div>
                 
                 {task.error_message && (
-                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                  <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded text-xs text-destructive">
                     <span className="font-medium">Error:</span> {task.error_message}
                   </div>
                 )}
@@ -199,35 +199,35 @@ export default function TaskHistory() {
         {/* Task Summary */}
         <div className="mt-6 pt-4 border-t">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="bg-green-50 p-3 rounded-lg">
-              <div className="text-lg font-bold text-green-600">
+            <div className="bg-primary/10 p-3 rounded-lg">
+              <div className="text-lg font-bold text-primary">
                 {tasks?.filter(t => t.status === 'completed').length || 0}
               </div>
-              <div className="text-xs text-green-700">Completed</div>
+              <div className="text-xs text-muted-foreground">Completed</div>
             </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="text-lg font-bold text-blue-600">
+            <div className="bg-primary/5 p-3 rounded-lg">
+              <div className="text-lg font-bold text-primary">
                 {tasks?.filter(t => t.status === 'running').length || 0}
               </div>
-              <div className="text-xs text-blue-700">Running</div>
+              <div className="text-xs text-muted-foreground">Running</div>
             </div>
-            <div className="bg-yellow-50 p-3 rounded-lg">
-              <div className="text-lg font-bold text-yellow-600">
+            <div className="bg-muted p-3 rounded-lg">
+              <div className="text-lg font-bold text-muted-foreground">
                 {tasks?.filter(t => t.status === 'pending').length || 0}
               </div>
-              <div className="text-xs text-yellow-700">Pending</div>
+              <div className="text-xs text-muted-foreground">Pending</div>
             </div>
-            <div className="bg-red-50 p-3 rounded-lg">
-              <div className="text-lg font-bold text-red-600">
+            <div className="bg-destructive/10 p-3 rounded-lg">
+              <div className="text-lg font-bold text-destructive">
                 {tasks?.filter(t => t.status === 'failed').length || 0}
               </div>
-              <div className="text-xs text-red-700">Failed</div>
+              <div className="text-xs text-muted-foreground">Failed</div>
             </div>
           </div>
           
-          <div className="mt-4 text-center text-sm text-gray-600">
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             Total earnings from completed tasks: {' '}
-            <span className="font-medium text-green-600">
+            <span className="font-medium text-primary">
               {formatCurrency(
                 tasks?.filter(t => t.status === 'completed' && t.reward)
                      .reduce((sum, t) => sum + (t.reward || 0), 0) || 0

@@ -90,7 +90,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-4">Wallet Setup</h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Create or import a wallet to receive earnings from your provider node.
         </p>
       </div>
@@ -122,10 +122,10 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="bg-muted/50 border border-border rounded-lg p-4">
               <div className="flex items-start space-x-2">
                 <span className="text-destructive mt-0.5">Warning</span>
-                <div className="text-sm text-yellow-800">
+                <div className="text-sm text-muted-foreground">
                   <strong>Important:</strong> Make sure to backup your private key after generation. 
                   Store it securely - if you lose it, you'll lose access to your wallet and earnings.
                 </div>
@@ -141,9 +141,9 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 placeholder="Enter password (optional)..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Leave empty to skip password protection
               </p>
             </div>
@@ -155,7 +155,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                   placeholder="Confirm password..."
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                 />
               </div>
             )}
@@ -168,7 +168,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 onChange={(e) => setShowPassword(e.target.checked)}
                 className="rounded"
               />
-              <label htmlFor="showPassword" className="text-sm text-gray-600">
+              <label htmlFor="showPassword" className="text-sm text-muted-foreground">
                 Show password
               </label>
             </div>
@@ -193,9 +193,9 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 placeholder="0x1234567890abcdef..."
                 value={importKey}
                 onChange={(e) => setImportKey(e.target.value.trim())}
-                className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-none"
+                className="w-full h-24 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring font-mono text-sm resize-none"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Enter your 64-character hex private key starting with '0x'
               </p>
             </div>
@@ -209,7 +209,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 placeholder="Enter password (optional)..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
             </div>
 
@@ -220,7 +220,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                   placeholder="Confirm password..."
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
                 />
               </div>
             )}
@@ -233,7 +233,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 onChange={(e) => setShowPassword(e.target.checked)}
                 className="rounded"
               />
-              <label htmlFor="showImportPassword" className="text-sm text-gray-600">
+              <label htmlFor="showImportPassword" className="text-sm text-muted-foreground">
                 Show password
               </label>
             </div>
@@ -252,7 +252,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
         >
           {isLoading ? (
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span>{mode === 'generate' ? 'Generating...' : 'Importing...'}</span>
             </div>
           ) : (

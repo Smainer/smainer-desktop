@@ -73,7 +73,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
                 value={relayerUrl}
                 onChange={(e) => setRelayerUrl(e.target.value)}
                 placeholder="https://api.smainer.io"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring"
               />
             </div>
             
@@ -87,7 +87,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
                 onChange={(e) => setPort(parseInt(e.target.value) || 8080)}
                 min="1024"
                 max="65535"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring"
               />
             </div>
             
@@ -101,7 +101,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
                 onChange={(e) => setMaxTasks(parseInt(e.target.value) || 10)}
                 min="1"
                 max="100"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring"
               />
             </div>
             
@@ -112,7 +112,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
               <select
                 value={logLevel}
                 onChange={(e) => setLogLevel(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring"
               >
                 <option value="error">Error</option>
                 <option value="warn">Warning</option>
@@ -131,7 +131,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
                 onChange={(e) => setAutoStart(e.target.checked)}
                 className="rounded"
               />
-              <label htmlFor="autoStart" className="text-sm text-gray-700">
+              <label htmlFor="autoStart" className="text-sm text-muted-foreground">
                 Start provider automatically on system startup
               </label>
             </div>
@@ -144,7 +144,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
                 onChange={(e) => setGpuEnabled(e.target.checked)}
                 className="rounded"
               />
-              <label htmlFor="gpuEnabled" className="text-sm text-gray-700">
+              <label htmlFor="gpuEnabled" className="text-sm text-muted-foreground">
                 Enable GPU acceleration for AI tasks
               </label>
             </div>
@@ -176,7 +176,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
           </div>
           
           <div className="pt-4 border-t">
-            <div className="text-sm text-gray-600 mb-3">
+            <div className="text-sm text-muted-foreground mb-3">
               Need to start over? Reset all settings and return to the onboarding wizard.
             </div>
             <Button 
@@ -200,7 +200,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
             <div>Version: 0.1.0</div>
             <div>Build: Development</div>
             <div>Provider Version: 0.1.0</div>
-            <div className="pt-2 border-t text-gray-600">
+            <div className="pt-2 border-t text-muted-foreground">
               <p>Smainer Desktop makes it easy to run a provider node on Windows.</p>
               <p className="mt-1">
                 For support, visit our documentation or contact the development team.
