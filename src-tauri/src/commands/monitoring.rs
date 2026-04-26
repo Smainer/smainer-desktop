@@ -76,8 +76,10 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
     if is_running && !wallet_addr.is_empty() {
         // Query Relayer API for real stats
         let client = reqwest::Client::new();
-        // Assume API endpoint /provider/{address}/status
-        let url = format!("{}/provider/{}/status", relayer_url, wallet_addr);
+        // Correct relayer endpoint: /api/v1/nodes/{node_id}
+        let node_id = wallet_addr.trim_start_matches("0x").chars().filter(|c| c.is_alphanumeric()).take(24).collect::<String>();
+        let node_id = if node_id.is_empty() { wallet_addr.clone() } else { node_id };
+        let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
         
         match client.get(&url).send().await {
             Ok(resp) => {

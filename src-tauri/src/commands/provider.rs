@@ -37,6 +37,34 @@ pub struct RegistrationRequest {
     pub stake_amount: Option<u64>,
 }
 
+/// Convert HTTP(S) URL to WebSocket URL for provider sidecar
+fn http_to_ws_url(url: &str) -> String {
+    if url.starts_with("https://") {
+        format!("wss://{}", &url[8..])
+    } else if url.starts_with("http://") {
+        format!("ws://{}", &url[7..])
+    } else {
+        url.to_string()
+    }
+}
+
+/// Read Starknet private key from local wallet file (~/.smainer/wallet.json)
+fn read_wallet_private_key() -> Option<String> {
+    let mut path = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    path.push(".smainer");
+    path.push("wallet.json");
+    let content = std::fs::read_to_string(path).ok()?;
+    let stored: serde_json::Value = serde_json::from_str(&content).ok()?;
+    stored.get("private_key")?.as_str().map(|s| s.to_string())
+}
+
+/// Derive a short alphanumeric node_id from wallet address
+fn node_id_from_address(addr: &str) -> String {
+    let stripped = addr.trim_start_matches("0x");
+    let id: String = stripped.chars().filter(|c| c.is_alphanumeric()).take(24).collect();
+    if id.is_empty() { "default-node".to_string() } else { id }
+}
+
 #[command]
 pub async fn start_provider(
     config: ProviderConfig,
@@ -95,9 +123,18 @@ pub async fn start_provider(
         return Err("Provider sidecar not bundled in this build. Set SMAINER_PROVIDER_CMD to a provider executable, or run a release build produced by CI.".to_string());
     };
     
-    // Pass args
+    // Pass required env vars to sidecar
+    // Convert HTTP(S) → WS(S) — provider config.py rejects non-ws:// URLs
+    let ws_url = http_to_ws_url(&config.relayer_url);
+    cmd.env("RELAYER_WS_URL", &ws_url);
     cmd.env("STARKNET_ACCOUNT_ADDRESS", &config.wallet_address);
-    cmd.env("RELAYER_WS_URL", &config.relayer_url);
+    // NODE_ID: derive from wallet address for stable identity
+    let node_id = node_id_from_address(&config.wallet_address);
+    cmd.env("NODE_ID", &node_id);
+    // STARKNET_PRIVATE_KEY: required for WS auth signature — read from local wallet file
+    if let Some(pk) = read_wallet_private_key() {
+        cmd.env("STARKNET_PRIVATE_KEY", pk);
+    }
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
