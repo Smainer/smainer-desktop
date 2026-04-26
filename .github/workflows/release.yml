@@ -35,10 +35,12 @@ jobs:
 
       - name: Build provider sidecar
         shell: pwsh
+        env:
+          MONOREPO_TOKEN: ${{ secrets.MONOREPO_TOKEN }}
         run: |
-          # Clone only the provider source from smainer monorepo
+          # Clone only backend/provider from the private monorepo using PAT
           git clone --depth 1 --filter=blob:none --sparse `
-            https://github.com/Smainer/smainer.git _monorepo
+            "https://$env:MONOREPO_TOKEN@github.com/Smainer/smainer.git" _monorepo
           cd _monorepo
           git sparse-checkout set backend/provider
           cd ..
