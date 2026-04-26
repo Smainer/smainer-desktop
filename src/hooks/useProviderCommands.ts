@@ -25,10 +25,17 @@ export function useStartProvider() {
     mutationFn: (config: ProviderConfig) => 
       invoke<boolean>('start_provider', { config }),
     onSuccess: () => {
-      toast.success('Provider started successfully')
+      toast.success('Node started successfully')
     },
     onError: (error: any) => {
-      toast.error(`Failed to start provider: ${error}`)
+      const errorMsg = error.toString()
+      if (errorMsg.includes('provider daemon')) {
+        toast.error('Provider daemon not found. Please use the installer version or configure SMAINER_PROVIDER_CMD environment variable.')
+      } else if (errorMsg.includes('wallet')) {
+        toast.error('Wallet configuration error. Please check your wallet setup.')
+      } else {
+        toast.error(`Failed to start node: ${errorMsg}`)
+      }
     },
   })
 }

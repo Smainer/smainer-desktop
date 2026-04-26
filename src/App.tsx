@@ -48,18 +48,30 @@ function AppContent() {
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       try {
-        // Check if wallet exists and node is registered
         const { invoke } = await import('@tauri-apps/api/core');
         
+        // Check if wallet exists
         const walletAddress = await invoke<string>('get_wallet_address').catch(() => null);
         
         if (walletAddress) {
-          setAppState(prev => ({
-            ...prev,
-            onboardingComplete: true,
-            walletAddress,
-            nodeId: nodeStatus?.node_id || null,
-          }));
+          // Check if node is actually registered with the relayer
+          const registrationStatus = await invoke<boolean>('check_registration_status', { walletAddress }).catch(() => false);
+          
+          if (registrationStatus) {
+            setAppState(prev => ({
+              ...prev,
+              onboardingComplete: true,
+              walletAddress,
+              nodeId: nodeStatus?.node_id || null,
+            }));
+          } else {
+            // Wallet exists but not registered - start from wallet setup
+            setAppState(prev => ({
+              ...prev,
+              currentStep: 1,
+              walletAddress,
+            }));
+          }
         }
       } catch (error) {
         console.warn('Failed to check onboarding status:', error);
@@ -93,7 +105,7 @@ function AppContent() {
         <div className="container mx-auto px-6 py-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">Smainer Desktop</h1>
-            <p className="text-lg text-zinc-400">Set up your provider node in minutes</p>
+            <p className="text-lg text-muted-foreground">Set up your provider node in minutes</p>
           </div>
 
           <div className="max-w-4xl mx-auto">
@@ -111,8 +123,8 @@ function AppContent() {
                     const stateClasses = isActive 
                       ? 'bg-primary/10 text-primary border-primary'
                       : isCompleted
-                      ? 'bg-zinc-800 text-white border-zinc-700'
-                      : 'bg-zinc-900 text-zinc-400 border-zinc-800';
+                      ? 'bg-card text-card-foreground border-border'
+                      : 'bg-muted/50 text-muted-foreground border-border';
                     
                     return (
                       <div key={step} className={baseClasses + ' ' + stateClasses}>
@@ -203,10 +215,10 @@ function AppContent() {
 
       <div className="container mx-auto px-6 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-zinc-900 border border-zinc-800">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-card/50 border border-border p-1 rounded-lg">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dashboard</TabsTrigger>
+            <TabsTrigger value="tasks" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Tasks</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-8 mt-8">

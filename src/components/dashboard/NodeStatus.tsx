@@ -37,7 +37,8 @@ export default function NodeStatus({ status }: NodeStatusProps) {
         })
       } catch (error) {
         console.error('Failed to get wallet address:', error)
-        // TODO: Show user-friendly error in UI
+        const { toast } = await import('sonner')
+        toast.error('No wallet found. Please complete onboarding first.')
       }
     }
   }
@@ -59,7 +60,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
                 }`} />
               </CardTitle>
               <CardDescription>
-                {status?.is_online ? 'Your node is running and accepting tasks' : 'Node is offline'}
+                {startProvider.isPending ? 'Connecting to network...' : stopProvider.isPending ? 'Shutting down...' : status?.is_online ? 'Your node is running and accepting tasks' : status?.relayer_connected === false && status?.network_status === 'disconnected' ? 'Node offline - unable to connect to relayer' : 'Node is offline'}
               </CardDescription>
             </div>
             <Button
@@ -67,7 +68,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
               variant={status?.is_online ? 'destructive' : 'default'}
               disabled={startProvider.isPending || stopProvider.isPending}
             >
-              {status?.is_online ? 'Stop Node' : 'Start Node'}
+              {startProvider.isPending ? 'Starting...' : stopProvider.isPending ? 'Stopping...' : status?.is_online ? 'Stop Node' : 'Start Node'}
             </Button>
           </div>
         </CardHeader>

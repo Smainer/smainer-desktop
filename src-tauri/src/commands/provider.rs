@@ -120,7 +120,7 @@ pub async fn start_provider(
         Command::new(&sidecar_path)
     } else {
         // No sidecar and no environment override - return clear error
-        return Err("This development build does not include the provider daemon. To start a node, use the Windows installer build or connect a local provider via SMAINER_PROVIDER_CMD environment variable.".to_string());
+        return Err("Provider daemon not found. Use the installer build or set SMAINER_PROVIDER_CMD environment variable.".to_string());
     };
     
     // Pass required env vars to sidecar
@@ -237,5 +237,33 @@ pub async fn register_node(registration: NodeRegistration) -> Result<String, Str
         Ok("success".to_string())
     } else {
         Err(format!("Registration failed: {}", response.status()))
+    }
+}
+
+#[command]
+pub async fn check_registration_status(wallet_address: String) -> Result<bool, String> {
+    tracing::info!("Checking registration status for wallet: {}", &wallet_address[..6]);
+    
+    let client = reqwest::Client::new();
+    let relayer_url = "https://api.smainer.io";
+    
+    // Derive node_id from wallet address
+    let node_id = node_id_from_address(&wallet_address);
+    let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
+    
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                Ok(true)
+            } else if response.status().as_u16() == 404 {
+                Ok(false) // Not registered
+            } else {
+                Ok(false) // Assume not registered on other errors
+            }
+        }
+        Err(_) => {
+            // Network error - assume not registered for safety
+            Ok(false)
+        }
     }
 }

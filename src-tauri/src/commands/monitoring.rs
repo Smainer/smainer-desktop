@@ -57,7 +57,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
     // Default offline status
     let mut status = NodeStatus {
-        is_online: is_running,
+        is_online: false,
         node_id: wallet_addr.clone(),
         uptime: 0,
         last_heartbeat: Utc::now(),
@@ -67,7 +67,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
         cpu_usage: 0.0,
         memory_usage: 0.0,
         gpu_usage: None,
-        network_status: if is_running { "connected".to_string() } else { "disconnected".to_string() },
+        network_status: if is_running { "connecting".to_string() } else { "disconnected".to_string() },
         relayer_connected: false,
         provider_version: "0.1.0".to_string(),
         node_tier: "standard".to_string(),
@@ -75,7 +75,11 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
     if is_running && !wallet_addr.is_empty() {
         // Query Relayer API for real stats
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .map_err(|e| e.to_string())?;
+            
         // Correct relayer endpoint: /api/v1/nodes/{node_id}
         let node_id = wallet_addr.trim_start_matches("0x").chars().filter(|c| c.is_alphanumeric()).take(24).collect::<String>();
         let node_id = if node_id.is_empty() { wallet_addr.clone() } else { node_id };
@@ -89,12 +93,25 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
                         status = real_status;
                         status.is_online = true; // Confirmed by relayer
                         status.relayer_connected = true;
+                        status.network_status = "connected".to_string();
+                    } else {
+                        // Process running but can't parse response
+                        status.is_online = false;
+                        status.relayer_connected = false;
+                        status.network_status = "connected_unregistered".to_string();
                     }
+                } else {
+                    // Process running but not found in relayer
+                    status.is_online = false;
+                    status.relayer_connected = false;
+                    status.network_status = "connected_unregistered".to_string();
                 }
             },
             Err(_) => {
                 // Keep local status but mark relayer disconnected
+                status.is_online = false;
                 status.relayer_connected = false;
+                status.network_status = "connecting".to_string();
             }
         }
     }
