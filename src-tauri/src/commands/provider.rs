@@ -120,7 +120,7 @@ pub async fn start_provider(
         Command::new(&sidecar_path)
     } else {
         // No sidecar and no environment override - return clear error
-        return Err("Provider sidecar not bundled in this build. Set SMAINER_PROVIDER_CMD to a provider executable, or run a release build produced by CI.".to_string());
+        return Err("Node startup requires the Smainer Provider component.\n\nThis development build doesn't include the provider. To start your node:\n• Download the full release installer from smainer.io\n• Or set SMAINER_PROVIDER_CMD environment variable to your provider path\n\nFor support, visit our Discord community.".to_string());
     };
     
     // Pass required env vars to sidecar
