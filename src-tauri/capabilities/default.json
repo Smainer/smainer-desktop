@@ -1,5 +1,5 @@
 {
-  "$schema": "../gen/schemas/desktop-schema.json", 
+  "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capability for the main window",
   "local": true,
@@ -13,14 +13,34 @@
     "core:menu:default",
     "core:tray:default",
     "fs:allow-read-text-file",
-    "fs:allow-write-text-file", 
+    "fs:allow-write-text-file",
     "fs:allow-mkdir",
     "fs:allow-exists",
     "fs:allow-read-dir",
-    "shell:allow-execute",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$APPDATA/smainer/**",
+        "$LOCALDATA/smainer/**"
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "provider-daemon",
+          "cmd": "smainer-provider",
+          "args": [
+            { "validator": "^(start|stop|status)$" },
+            "--config",
+            { "validator": ".+" }
+          ]
+        }
+      ]
+    },
     "os:allow-locale",
     "os:allow-platform",
-    "os:allow-version", 
+    "os:allow-version",
     "process:allow-exit",
     "process:allow-restart",
     "window-state:allow-restore-state",

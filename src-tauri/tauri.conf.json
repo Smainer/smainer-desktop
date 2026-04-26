@@ -42,7 +42,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi"],
+    "targets": [
+      "msi"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -55,7 +57,9 @@
       "digestAlgorithm": "sha256",
       "timestampUrl": "",
       "wix": {
-        "language": ["en-US"],
+        "language": [
+          "en-US"
+        ],
         "template": null,
         "fragmentPaths": [],
         "componentGroupRefs": [],
@@ -67,35 +71,10 @@
       "nsis": null
     },
     "publisher": "Smainer Team",
-    "copyright": "Copyright © 2026 Smainer Team",
+    "copyright": "Copyright \u00a9 2026 Smainer Team",
     "category": "DeveloperTool",
     "shortDescription": "Windows provider node onboarding application",
     "longDescription": "A desktop application to easily set up and manage Smainer provider nodes on Windows systems"
   },
-  "plugins": {
-    "fs": {
-      "scope": {
-        "allow": [
-          "$APPDATA/smainer/*",
-          "$LOCALDATA/smainer/*"
-        ],
-        "deny": ["**"]
-      }
-    },
-    "shell": {
-      "scope": {
-        "allow": [
-          {
-            "name": "provider-daemon",
-            "cmd": "smainer-provider",
-            "args": ["start", "stop", "status", "--config", "*"]
-          }
-        ]
-      }
-    },
-    "process": {
-      "exitOnAllWindowsClosed": false
-    },
-    "window-state": {}
-  }
+  "plugins": {}
 }

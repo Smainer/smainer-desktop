@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 
 
 <#
@@ -89,11 +89,15 @@ function Test-Prerequisites {
         throw "PowerShell 5.1 or higher required. Current version: $($PSVersionTable.PSVersion)"
     }
     
-    # Check admin privileges
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        throw "Administrator privileges required. Please run PowerShell as Administrator."
+    # Check admin privileges (skipped in DryRun to allow preview without elevation)
+    if (-not $DryRun) {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw "Administrator privileges required. Please run PowerShell as Administrator."
+        }
+    } else {
+        Write-StatusMessage "DryRun: skipping Administrator check" -Level "WARNING"
     }
     
     # Check internet connectivity for component downloads
@@ -610,23 +614,23 @@ function Show-InstallationSummary {
     Write-Host ""
     
     Write-Host "Configuration Summary:" -ForegroundColor Cyan
-    Write-Host "  • Install Mode: $($Config.InstallMode)" -ForegroundColor White
-    Write-Host "  • Relayer URL: $($Config.RelayerUrl)" -ForegroundColor White  
-    Write-Host "  • Node ID: $($Config.NodeId)" -ForegroundColor White
-    Write-Host "  • Service Account: $SMAINER_USER" -ForegroundColor White
-    Write-Host "  • Config File: $SMAINER_CONFIG" -ForegroundColor White
-    Write-Host "  • Log Directory: $SMAINER_LOG" -ForegroundColor White
+    Write-Host "  - Install Mode: $($Config.InstallMode)" -ForegroundColor White
+    Write-Host "  - Relayer URL: $($Config.RelayerUrl)" -ForegroundColor White  
+    Write-Host "  - Node ID: $($Config.NodeId)" -ForegroundColor White
+    Write-Host "  - Service Account: $SMAINER_USER" -ForegroundColor White
+    Write-Host "  - Config File: $SMAINER_CONFIG" -ForegroundColor White
+    Write-Host "  - Log Directory: $SMAINER_LOG" -ForegroundColor White
     Write-Host ""
     
     Write-Host "Installed Components:" -ForegroundColor Cyan
     if ($Config.InstallOllama) {
-        Write-Host "  ✓ Ollama AI Runtime" -ForegroundColor Green
+        Write-Host "  [OK] Ollama AI Runtime" -ForegroundColor Green
         if ($Config.PullModel) {
-            Write-Host "  ✓ llama3.1:8b Model" -ForegroundColor Green
+            Write-Host "  [OK] llama3.1:8b Model" -ForegroundColor Green
         }
     }
     if ($Config.InstallTlab) {
-        Write-Host "  • TransformerLab (manual installation required)" -ForegroundColor Yellow
+        Write-Host "  - TransformerLab (manual installation required)" -ForegroundColor Yellow
     }
     Write-Host ""
     
