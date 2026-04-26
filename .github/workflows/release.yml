@@ -38,10 +38,15 @@ jobs:
         env:
           MONOREPO_TOKEN: ${{ secrets.MONOREPO_TOKEN }}
         run: |
-          # Clone smainer-backend (shallow) — provider lives here
-          git clone --depth 1 `
+          # Clone without checkout to avoid Windows-illegal filenames (#, etc.)
+          git clone --depth 1 --no-checkout `
             "https://x-access-token:$env:MONOREPO_TOKEN@github.com/Smainer/smainer-backend.git" `
             _backend
+
+          # Enable sparse checkout — only pull provider/src/provider/
+          git -C _backend sparse-checkout init --cone
+          git -C _backend sparse-checkout set provider/src/provider
+          git -C _backend checkout
 
           # Verify
           $mainPy = "_backend\provider\src\provider\main.py"
@@ -52,7 +57,7 @@ jobs:
           }
           Write-Host "Found: $mainPy"
 
-          # Install provider dependencies + PyInstaller
+          # Install dependencies + PyInstaller
           pip install pyinstaller websockets psutil starknet-py aiohttp
 
           # Build standalone exe
