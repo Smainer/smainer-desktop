@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-#Requires -RunAsAdministrator
+
 
 <#
 .SYNOPSIS
@@ -30,6 +30,17 @@ param(
 # Strict error handling - fail closed behavior
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# Elevation required for real install only (not for -DryRun)
+if (-not $DryRun) {
+    $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Host "[ERROR] This script requires Administrator privileges for installation." -ForegroundColor Red
+        Write-Host "        To preview the install plan without changes, run:" -ForegroundColor Yellow
+        Write-Host "        powershell -ExecutionPolicy Bypass -File .\install-smainer-daemon.ps1 -DryRun" -ForegroundColor Cyan
+        exit 1
+    }
+}
 
 # Security constants
 $SMAINER_SERVICE_NAME = "SmaiserProviderDaemon"
