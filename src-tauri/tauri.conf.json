@@ -77,12 +77,7 @@
         "languages": [
           "English"
         ],
-        "displayLanguageSelector": false,
-        "compressionLevel": "best",
-        "shortcut": true,
-        "startMenuFolder": "Smainer",
-        "installPath": "$LOCALAPPDATA\\Smainer",
-        "allowToChangeInstallationDirectory": false
+        "displayLanguageSelector": false
       }
     },
     "publisher": "Smainer Team",
