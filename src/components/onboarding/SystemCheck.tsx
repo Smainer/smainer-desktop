@@ -19,7 +19,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
       <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Checking Your System</h2>
-          <p className="text-gray-600 mb-8">Please wait while we analyze your hardware...</p>
+          <p className="text-muted-foreground mb-8">Please wait while we analyze your hardware...</p>
           <div className="spinner mx-auto" />
         </div>
       </div>
@@ -30,7 +30,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
     return (
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-4 text-red-600">System Check Failed</h2>
-        <p className="text-gray-600 mb-8">Unable to analyze your system. Please try again.</p>
+        <p className="text-muted-foreground mb-8">Unable to analyze your system. Please try again.</p>
         <Button onClick={() => window.location.reload()}>Retry</Button>
       </div>
     )
@@ -46,7 +46,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-4">System Requirements Check</h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Let's make sure your system can run a Smainer provider node effectively.
         </p>
       </div>
@@ -60,9 +60,9 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600">{hardware?.cpu_name}</p>
+            <p className="text-sm text-muted-foreground">{hardware?.cpu_name}</p>
             <p className="text-lg font-bold">{hardware?.cpu_cores} cores</p>
-            <p className="text-xs mt-1 text-gray-500">
+            <p className="text-xs mt-1 text-muted-foreground/80">
               {requirements?.cpu_ok ? 'Excellent' : 'Minimum 4 cores recommended'}
             </p>
           </CardContent>
@@ -81,7 +81,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
               value={(ramGB / 32) * 100} 
               className="mt-2" 
             />
-            <p className="text-xs mt-1 text-gray-500">
+            <p className="text-xs mt-1 text-muted-foreground/80">
               {requirements?.ram_ok ? 'Sufficient' : 'Need 8GB+ for stable operation'}
             </p>
           </CardContent>
@@ -97,16 +97,16 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
           <CardContent>
             {bestGpu ? (
               <>
-                <p className="text-sm text-gray-600 truncate">{bestGpu.name}</p>
+                <p className="text-sm text-muted-foreground truncate">{bestGpu.name}</p>
                 <p className="text-lg font-bold">{Math.round(bestGpu.memory / 1024)} GB VRAM</p>
-                <p className="text-xs mt-1 text-gray-500">
+                <p className="text-xs mt-1 text-muted-foreground/80">
                   {bestGpu.memory >= 4096 ? 'Ready for AI tasks' : 'Limited task capacity'}
                 </p>
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-600">No supported GPU found</p>
-                <p className="text-xs mt-1 text-red-500">
+                <p className="text-sm text-muted-foreground">No supported GPU found</p>
+                <p className="text-xs mt-1 text-destructive">
                   GPU required for optimal earnings
                 </p>
               </>
@@ -119,14 +119,14 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
       {requirements && (requirements.warnings.length > 0 || requirements.errors.length > 0) && (
         <div className="space-y-4">
           {requirements.errors.length > 0 && (
-            <Card className="border-red-200 bg-red-50">
+            <Card className="border-destructive/20 bg-destructive/5">
               <CardHeader>
                 <CardTitle className="text-destructive">Critical Issues</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc list-inside space-y-1">
                   {requirements.errors.map((error, idx) => (
-                    <li key={idx} className="text-red-700 text-sm">{error}</li>
+                    <li key={idx} className="text-destructive text-sm">{error}</li>
                   ))}
                 </ul>
               </CardContent>
@@ -134,14 +134,14 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
           )}
           
           {requirements.warnings.length > 0 && (
-            <Card className="border-yellow-200 bg-yellow-50">
+            <Card className="border-yellow-500/20 bg-yellow-500/5">
               <CardHeader>
                 <CardTitle className="text-muted-foreground">Recommendations</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc list-inside space-y-1">
                   {requirements.warnings.map((warning, idx) => (
-                    <li key={idx} className="text-yellow-700 text-sm">{warning}</li>
+                    <li key={idx} className="text-yellow-500 text-sm">{warning}</li>
                   ))}
                 </ul>
               </CardContent>
@@ -153,8 +153,8 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
       {/* Overall Status */}
       <Card className={`${
         requirements?.meets_requirements 
-          ? 'border-green-200 bg-green-50' 
-          : 'border-red-200 bg-red-50'
+          ? 'border-green-500/20 bg-green-500/5' 
+          : 'border-destructive/20 bg-destructive/5'
       }`}>
         <CardHeader>
           <CardTitle className={requirements?.meets_requirements ? 'text-green-800' : 'text-red-800'}>
