@@ -70,14 +70,12 @@
         "mergeRefs": []
       },
       "nsis": {
-        "template": null,
-        "headerImage": null,
-        "sidebarImage": null,
         "installMode": "currentUser",
         "languages": [
           "English"
         ],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "compression": "lzma"
       }
     },
     "publisher": "Smainer Team",
