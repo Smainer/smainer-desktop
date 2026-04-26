@@ -68,18 +68,29 @@ pub async fn start_provider(
     let mut cmd = if std::path::Path::new(binary_path).exists() {
         Command::new(binary_path)
     } else {
-        // Fallback to python execution for dev environment
-        // Assuming running from desktop/src-tauri
-        // Path to backend/provider/src/provider/main.py is ../../backend/provider/src/provider/main.py
-        // Or run as module with python
-        let root_dir = std::env::current_dir().unwrap_or_default();
-        let backend_path = root_dir
-            .parent()
-            .and_then(|p| p.parent())
-            .unwrap_or(&root_dir)
-            .join("backend")
-            .join("provider");
-        
+        // Dev fallback: locate backend/provider relative to cwd or exe location
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_default();
+
+        // Candidates: walk up from cwd and exe_dir looking for backend/provider
+        let candidates: Vec<std::path::PathBuf> = vec![
+            cwd.join("backend").join("provider"),
+            cwd.parent().map(|p| p.join("backend").join("provider")).unwrap_or_default(),
+            cwd.parent().and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
+            exe_dir.join("backend").join("provider"),
+            exe_dir.parent().map(|p| p.join("backend").join("provider")).unwrap_or_default(),
+            exe_dir.parent().and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
+            exe_dir.parent().and_then(|p| p.parent()).and_then(|p| p.parent()).map(|p| p.join("backend").join("provider")).unwrap_or_default(),
+        ];
+
+        let backend_path = candidates
+            .into_iter()
+            .find(|p| p.exists() && p.is_dir())
+            .ok_or_else(|| "Provider backend not found. Download the full Smainer package from https://github.com/Smainer/smainer-desktop/releases".to_string())?;
+
         let python_cmd = if cfg!(target_os = "windows") { "python" } else { "python3" };
         let mut py_cmd = Command::new(python_cmd);
         py_cmd.current_dir(&backend_path);
