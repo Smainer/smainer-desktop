@@ -67,7 +67,7 @@ export default function NodeRegistration({
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Wallet Address:</span>
-              <p className="font-mono text-xs mt-1 bg-white p-2 rounded border">
+              <p className="font-mono text-xs mt-1 bg-muted p-2 rounded border border-border">
                 {walletAddress}
               </p>
             </div>
@@ -86,7 +86,7 @@ export default function NodeRegistration({
               <span className="text-muted-foreground block mb-2">Available GPUs:</span>
               <div className="space-y-1">
                 {supportedGpus.map((gpu, idx) => (
-                  <div key={idx} className="bg-white p-2 rounded border text-xs">
+                  <div key={idx} className="bg-muted p-2 rounded border border-border text-xs">
                     <span className="font-medium">{gpu.name}</span>
                     <span className="text-muted-foreground ml-2">
                       {Math.round(gpu.memory / 1024)}GB VRAM
@@ -116,7 +116,7 @@ export default function NodeRegistration({
               value={relayerUrl}
               onChange={(e) => setRelayerUrl(e.target.value)}
               placeholder="https://api.smainer.io"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             />
             <p className="text-xs text-muted-foreground mt-1">
               URL of the Smainer relayer service. Use http://localhost:8000 for local development.
@@ -132,7 +132,7 @@ export default function NodeRegistration({
               value={nodeName}
               onChange={(e) => setNodeName(e.target.value)}
               placeholder="My Smainer Node"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             />
             <p className="text-xs text-muted-foreground mt-1">
               A friendly name for your node to help identify it.
@@ -148,7 +148,7 @@ export default function NodeRegistration({
               value={contactInfo}
               onChange={(e) => setContactInfo(e.target.value)}
               placeholder="your.email@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
             />
             <p className="text-xs text-muted-foreground mt-1">
               Optional email for node operator communications.
