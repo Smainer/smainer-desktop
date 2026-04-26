@@ -332,8 +332,17 @@ pub async fn validate_ai_capabilities(config: AICapabilityConfig) -> Result<AICa
     tracing::info!("Validating AI capabilities");
     
     // Get current hardware info for validation
-    let hardware = crate::commands::hardware::get_system_info().await
+    let system_info = crate::commands::hardware::get_system_info().await
         .map_err(|e| format!("Failed to get hardware info: {}", e))?;
+    let hardware = crate::models::HardwareInfo {
+        cpu_name: system_info.cpu_name,
+        cpu_cores: system_info.cpu_cores,
+        total_ram: system_info.total_ram,
+        available_ram: system_info.available_ram,
+        gpus: system_info.gpus,
+        os: system_info.os,
+        os_version: system_info.os_version,
+    };
     
     let mut system_validation = SystemValidation {
         meets_ai_requirements: true,
