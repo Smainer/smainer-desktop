@@ -74,7 +74,7 @@ export default function EarningsCard() {
           <div className={`text-sm font-medium ${
             todayChange >= 0 ? 'text-primary' : 'text-destructive'
           }`}>
-            {todayChange >= 0 ? '↗' : '↘'} {Math.abs(todayChange).toFixed(1)}%
+            {todayChange >= 0 ? '+' : '-'} {Math.abs(todayChange).toFixed(1)}%
           </div>
         </div>
 
