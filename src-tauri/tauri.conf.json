@@ -43,6 +43,7 @@
   "bundle": {
     "active": true,
     "targets": [
+      "nsis",
       "msi"
     ],
     "icon": [
@@ -68,10 +69,24 @@
         "featureRefs": [],
         "mergeRefs": []
       },
-      "nsis": null
+      "nsis": {
+        "template": null,
+        "headerImage": null,
+        "sidebarImage": null,
+        "installMode": "currentUser",
+        "languages": [
+          "English"
+        ],
+        "displayLanguageSelector": false,
+        "compressionLevel": "best",
+        "shortcut": true,
+        "startMenuFolder": "Smainer",
+        "installPath": "$LOCALAPPDATA\\Smainer",
+        "allowToChangeInstallationDirectory": false
+      }
     },
     "publisher": "Smainer Team",
-    "copyright": "Copyright \u00a9 2026 Smainer Team",
+    "copyright": "Copyright © 2026 Smainer Team",
     "category": "DeveloperTool",
     "shortDescription": "Windows provider node onboarding application",
     "longDescription": "A desktop application to easily set up and manage Smainer provider nodes on Windows systems"
