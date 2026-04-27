@@ -237,6 +237,23 @@ function Get-UserChoices {
                 $confirmDownload = Read-Host "       Download selected models now? [Y/n] (default: Y)"
                 $pullModel = ($confirmDownload -ne "n" -and $confirmDownload -ne "N")
             }
+            
+            # Explicit confirmation with source disclosure (MTG-OLLAMA-001 requirement)
+            if ($installOllama) {
+                Write-Host ""
+                Write-Host "   INSTALLATION CONFIRMATION:" -ForegroundColor Yellow
+                Write-Host "   Ollama will be installed from one of the following sources:" -ForegroundColor White
+                Write-Host "   - Primary: winget package manager (Ollama.Ollama)" -ForegroundColor White
+                Write-Host "   - Fallback: Direct download from https://ollama.com/download/OllamaSetup.exe" -ForegroundColor White
+                Write-Host "   Downloads use HTTPS only and are cryptographically verified before execution." -ForegroundColor White
+                Write-Host ""
+                $finalConfirm = Read-Host "   Proceed with Ollama installation? [Y/n] (default: n)"
+                if ($finalConfirm -ne "y" -and $finalConfirm -ne "Y") {
+                    Write-StatusMessage "Ollama installation cancelled by user" -Level "WARNING"
+                    $installOllama = $false
+                    $pullModel = $false
+                }
+            }
         }
         
         Write-Host ""
@@ -572,32 +589,90 @@ function Store-SecureCredentials {
 
 function Install-OllamaComponent {
     param(
-        [bool]$PullModel
+        [bool]$PullModel,
+        [string[]]$SelectedModels = @()
     )
     
     Write-StatusMessage "Installing Ollama AI runtime..."
     
     if ($DryRun) {
-        Write-StatusMessage "DRY RUN: Would download and install Ollama from $OLLAMA_URL"
-        if ($PullModel) {
-            Write-StatusMessage "DRY RUN: Would pull llama3.1:8b model (4.7GB)"
+        Write-StatusMessage "DRY RUN: Would install Ollama via winget or direct HTTPS download with signature verification"
+        if ($PullModel -and $SelectedModels.Count -gt 0) {
+            Write-StatusMessage "DRY RUN: Would pull models: $($SelectedModels -join ', ')"
         }
         return
     }
     
     try {
-        # Download Ollama installer
-        $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
-        $ollamaInstaller = Join-Path -Path $tempDir -ChildPath "ollama-setup.exe"
+        $ollamaInstalled = $false
         
-        # Note: In production, you would verify the SHA256 hash here
-        Invoke-SecureDownload -Url $OLLAMA_URL -OutputPath $ollamaInstaller
+        # Try winget installation first (MTG-OLLAMA-001: preferred method)
+        Write-StatusMessage "Attempting Ollama installation via winget..."
+        $wingetAvailable = Get-Command winget -ErrorAction SilentlyContinue
         
-        # Install Ollama silently
-        Write-StatusMessage "Installing Ollama..."
-        Start-Process -FilePath $ollamaInstaller -ArgumentList "/S" -Wait -NoNewWindow
+        if ($wingetAvailable) {
+            try {
+                winget install --id Ollama.Ollama --exact --silent --accept-package-agreements --accept-source-agreements
+                if ($LASTEXITCODE -eq 0) {
+                    Write-StatusMessage "Ollama installed successfully via winget" -Level "SUCCESS"
+                    $ollamaInstalled = $true
+                } else {
+                    Write-StatusMessage "winget installation failed with exit code $LASTEXITCODE, trying fallback method..." -Level "WARNING"
+                }
+            }
+            catch {
+                Write-StatusMessage "winget installation threw exception: $($_.Exception.Message)" -Level "WARNING"
+            }
+        } else {
+            Write-StatusMessage "winget not available, using direct download method" -Level "WARNING"
+        }
         
-        # Wait for Ollama to be available
+        # Fallback to direct download with signature verification (MTG-OLLAMA-001: HTTPS-only, signature verification required)
+        if (-not $ollamaInstalled) {
+            Write-StatusMessage "Installing Ollama via direct download..."
+            $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
+            $ollamaInstaller = Join-Path -Path $tempDir -ChildPath "OllamaSetup.exe"
+            
+            # Direct HTTPS binary URL (not landing page)
+            $directDownloadUrl = "https://ollama.com/download/OllamaSetup.exe"
+            
+            try {
+                # Download installer (HTTPS-only enforced in Invoke-SecureDownload)
+                Invoke-SecureDownload -Url $directDownloadUrl -OutputPath $ollamaInstaller
+                
+                # MTG-OLLAMA-001 Requirement: Verify Authenticode signature before execution
+                Write-StatusMessage "Verifying installer signature..."
+                $signature = Get-AuthenticodeSignature -FilePath $ollamaInstaller
+                
+                if ($signature.Status -ne "Valid") {
+                    Remove-Item -Path $ollamaInstaller -Force
+                    throw "Installer signature verification failed. Status: $($signature.Status). Installation aborted for security."
+                }
+                
+                # Verify publisher (expected: Ollama in subject)
+                $publisherName = $signature.SignerCertificate.Subject
+                if ($publisherName -notmatch "Ollama") {
+                    Remove-Item -Path $ollamaInstaller -Force
+                    throw "Installer publisher mismatch. Expected 'Ollama' in subject, got: $publisherName. Installation aborted for security."
+                }
+                
+                Write-StatusMessage "Signature valid: $publisherName" -Level "SUCCESS"
+                
+                # Install Ollama silently
+                Write-StatusMessage "Running installer..."
+                Start-Process -FilePath $ollamaInstaller -ArgumentList "/S" -Wait -NoNewWindow
+                
+                $ollamaInstalled = $true
+            }
+            finally {
+                # Cleanup temp files
+                if (Test-Path $tempDir) {
+                    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        
+        # Verify installation and wait for Ollama to be available
         $ollamaPath = "${env:LOCALAPPDATA}\Programs\Ollama\ollama.exe"
         $timeout = 30
         while (-not (Test-Path $ollamaPath) -and $timeout -gt 0) {
@@ -606,25 +681,32 @@ function Install-OllamaComponent {
         }
         
         if (-not (Test-Path $ollamaPath)) {
-            throw "Ollama installation failed - executable not found"
+            throw "Ollama installation failed - executable not found at $ollamaPath"
+        }
+        
+        # Start Ollama service if not running
+        Write-StatusMessage "Starting Ollama service..."
+        $ollamaService = Get-Process -Name "ollama" -ErrorAction SilentlyContinue
+        if (-not $ollamaService) {
+            Start-Process -FilePath $ollamaPath -ArgumentList "serve" -WindowStyle Hidden
+            Start-Sleep -Seconds 5
         }
         
         $script:InstallState.ComponentsInstalled += "Ollama"
         Write-StatusMessage "Ollama installed successfully" -Level "SUCCESS"
         
-        # Pull model if requested
-        if ($PullModel) {
-            Write-StatusMessage "Pulling llama3.1:8b model (this may take several minutes)..."
-            & $ollamaPath pull llama3.1:8b
-            if ($LASTEXITCODE -eq 0) {
-                Write-StatusMessage "Model pulled successfully" -Level "SUCCESS"
-            } else {
-                Write-StatusMessage "Model pull failed (can be done later manually)" -Level "WARNING"
+        # Pull selected models if requested (MTG-OLLAMA-001: use selected models, not hardcoded)
+        if ($PullModel -and $SelectedModels.Count -gt 0) {
+            foreach ($model in $SelectedModels) {
+                Write-StatusMessage "Pulling model: $model (this may take several minutes)..."
+                & $ollamaPath pull $model
+                if ($LASTEXITCODE -eq 0) {
+                    Write-StatusMessage "Model $model pulled successfully" -Level "SUCCESS"
+                } else {
+                    Write-StatusMessage "Model $model pull failed (can be done later manually)" -Level "WARNING"
+                }
             }
         }
-        
-        # Cleanup
-        Remove-Item -Path $tempDir -Recurse -Force
     }
     catch {
         Write-StatusMessage "Ollama installation failed: $($_.Exception.Message)" -Level "ERROR"
@@ -841,7 +923,7 @@ function Start-Installation {
         
         # Install optional components
         if ($config.InstallOllama -and -not $ConfigOnly) {
-            Install-OllamaComponent -PullModel $config.PullModel
+            Install-OllamaComponent -PullModel $config.PullModel -SelectedModels $config.SelectedModels
         }
         
         if ($config.InstallTlab) {
