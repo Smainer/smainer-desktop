@@ -15,6 +15,7 @@ interface WalletInfo {
   public_key: string
   created_at: string
   encrypted: boolean
+  private_key?: string // BUG FIX: Added optional private_key field (only returned on generation)
 }
 
 export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
@@ -23,13 +24,24 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
   const [importKey, setImportKey] = useState('')
   const [mode, setMode] = useState<'generate' | 'import'>('generate')
   const [showPassword, setShowPassword] = useState(false)
+  // BUG FIX: State for showing private key modal
+  const [generatedPrivateKey, setGeneratedPrivateKey] = useState<string | null>(null)
+  const [privateKeySaved, setPrivateKeySaved] = useState(false)
+  const [walletAddress, setWalletAddress] = useState<string | null>(null)
 
   const generateWallet = useMutation({
     mutationFn: (password?: string) => 
       invoke<WalletInfo>('generate_wallet', { password }),
     onSuccess: (wallet) => {
-      toast.success('Wallet generated successfully!')
-      onNext(wallet.address)
+      // BUG FIX: Show private key modal instead of immediately proceeding
+      if (wallet.private_key) {
+        setGeneratedPrivateKey(wallet.private_key)
+        setWalletAddress(wallet.address)
+        setPrivateKeySaved(false)
+      } else {
+        toast.success('Wallet generated successfully!')
+        onNext(wallet.address)
+      }
     },
     onError: (error: any) => {
       toast.error(`Failed to generate wallet: ${error}`)
@@ -47,6 +59,26 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
       toast.error(`Failed to import wallet: ${error}`)
     },
   })
+
+  const handlePrivateKeyConfirmation = () => {
+    if (!privateKeySaved) {
+      toast.error('Please confirm you have saved your private key')
+      return
+    }
+    if (walletAddress) {
+      toast.success('Wallet generated successfully!')
+      onNext(walletAddress)
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied to clipboard!')
+    } catch (error) {
+      toast.error('Failed to copy to clipboard')
+    }
+  }
 
   const handleGenerate = () => {
     if (password && password !== confirmPassword) {
@@ -85,6 +117,89 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
   }
 
   const isLoading = generateWallet.isPending || importWallet.isPending
+
+  // BUG FIX: Private key display modal
+  if (generatedPrivateKey) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold mb-4 text-destructive">⚠️ Save Your Private Key</h2>
+          <p className="text-muted-foreground">
+            This is the ONLY time you will see your private key. Save it securely now!
+          </p>
+        </div>
+
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Your Private Key</CardTitle>
+            <CardDescription>
+              Store this in a secure password manager. Never share it with anyone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-muted p-4 rounded-lg border-2 border-destructive">
+              <div className="font-mono text-sm break-all select-all">
+                {generatedPrivateKey}
+              </div>
+            </div>
+
+            <Button
+              onClick={() => copyToClipboard(generatedPrivateKey)}
+              variant="outline"
+              className="w-full"
+            >
+              Copy Private Key
+            </Button>
+
+            <Alert variant="destructive">
+              <AlertDescription>
+                <strong>CRITICAL WARNING:</strong>
+                <ul className="mt-2 list-disc list-inside space-y-1 text-sm">
+                  <li>Anyone with this key can access your wallet and steal your funds</li>
+                  <li>If you lose this key, you will lose access to your wallet forever</li>
+                  <li>Smainer support will NEVER ask for your private key</li>
+                  <li>Store it offline in multiple secure locations</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex items-center space-x-2 p-4 bg-muted rounded-lg">
+              <input
+                type="checkbox"
+                id="confirmSaved"
+                checked={privateKeySaved}
+                onChange={(e) => setPrivateKeySaved(e.target.checked)}
+                className="rounded"
+              />
+              <label htmlFor="confirmSaved" className="text-sm font-medium">
+                I have securely saved my private key and understand that I cannot recover it if lost
+              </label>
+            </div>
+
+            <div className="flex justify-between pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setGeneratedPrivateKey(null)
+                  setWalletAddress(null)
+                  setPrivateKeySaved(false)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePrivateKeyConfirmation}
+                disabled={!privateKeySaved}
+                className="px-8"
+              >
+                I Have Saved My Key - Continue
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

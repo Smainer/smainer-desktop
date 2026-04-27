@@ -50,6 +50,7 @@ async fn main() {
             provider::save_ai_config,
             provider::load_ai_config,
             provider::validate_ai_capabilities,
+            provider::install_ollama,
             
             // Wallet commands
             wallet::generate_wallet,

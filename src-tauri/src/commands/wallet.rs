@@ -12,6 +12,8 @@ pub struct WalletInfo {
     pub public_key: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub encrypted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_key: Option<String>, // Only returned on generation, not on get_wallet_address
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,6 +63,7 @@ pub async fn generate_wallet(password: Option<String>) -> Result<WalletInfo, Str
         public_key: public_key_hex.clone(),
         created_at: chrono::Utc::now(),
         encrypted: password.is_some(),
+        private_key: Some(private_key_hex.clone()), // BUG FIX: Return private key on generation
     };
     
     // Store wallet
@@ -126,6 +129,7 @@ pub async fn import_wallet(private_key: String, password: Option<String>) -> Res
         public_key: public_key_hex.clone(),
         created_at: chrono::Utc::now(),
         encrypted: password.is_some(),
+        private_key: None, // BUG FIX: Don't return private key on import (user already has it)
     };
     
     // Store wallet

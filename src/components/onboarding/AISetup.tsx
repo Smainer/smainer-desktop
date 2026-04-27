@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-shell'
+import { toast } from 'sonner'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
@@ -161,12 +163,34 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
   }
 
   const updateModelSelection = (modelName: string, enabled: boolean) => {
-    setConfig(prev => ({
-      ...prev,
-      model_preferences: prev.model_preferences.map(model =>
-        model.name === modelName ? { ...model, enabled } : model
-      )
-    }))
+    setConfig(prev => {
+      // BUG FIX: Check if model exists in preferences
+      const exists = prev.model_preferences.find(m => m.name === modelName)
+      
+      if (exists) {
+        // Update existing model
+        return {
+          ...prev,
+          model_preferences: prev.model_preferences.map(m =>
+            m.name === modelName ? { ...m, enabled } : m
+          )
+        }
+      } else {
+        // Add new model to preferences
+        const modelDef = AVAILABLE_MODELS.find(m => m.name === modelName)
+        if (!modelDef) return prev
+        
+        return {
+          ...prev,
+          model_preferences: [...prev.model_preferences, {
+            name: modelName,
+            enabled,
+            priority: 5,
+            requirements: modelDef.requirements
+          }]
+        }
+      }
+    })
   }
 
   const updatePrivacyMode = (mode: 'Standard' | 'Enhanced' | 'Maximum') => {
@@ -177,9 +201,22 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
     setIsSaving(true)
     try {
       await invoke('save_ai_config', { config })
+      
+      // BUG FIX: Trigger Ollama installation if requested and not available
+      if (config.ollama_config?.install_requested && !ollamaAvailable) {
+        try {
+          await invoke('install_ollama')
+          toast.success('Ollama installation initiated successfully')
+        } catch (error) {
+          console.error('Failed to install Ollama:', error)
+          toast.error(`Failed to install Ollama: ${error}. You can install it manually from the guide.`)
+        }
+      }
+      
       onNext()
     } catch (error) {
       console.error('Failed to save AI config:', error)
+      toast.error('Failed to save AI configuration')
     } finally {
       setIsSaving(false)
     }
@@ -273,10 +310,10 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
                   <strong>Ollama Required:</strong> AI serving requires the Ollama runtime. 
                   Enable auto-install below, or follow the <a 
                     href="#" 
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.preventDefault();
-                      // TODO: Open OLLAMA_INSTALL_GUIDE.md in system viewer
-                      console.log('Opening Ollama install guide...');
+                      // BUG FIX: Open Ollama download page in browser
+                      await open('https://ollama.com/download');
                     }}
                     className="text-blue-600 hover:underline"
                   >installation guide</a> for manual setup.

@@ -57,7 +57,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
     // Default offline status
     let mut status = NodeStatus {
-        is_online: false,
+        is_online: is_running, // BUG FIX: Set online if process is running locally
         node_id: wallet_addr.clone(),
         uptime: 0,
         last_heartbeat: Utc::now(),
@@ -80,39 +80,50 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
             .build()
             .map_err(|e| e.to_string())?;
             
-        // Correct relayer endpoint: /api/v1/nodes/{node_id}
-        let node_id = wallet_addr.trim_start_matches("0x").chars().filter(|c| c.is_alphanumeric()).take(24).collect::<String>();
-        let node_id = if node_id.is_empty() { wallet_addr.clone() } else { node_id };
-        let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
+        // BUG FIX: Check relayer health endpoint first
+        let health_url = format!("{}/api/v1/health", relayer_url);
+        let relayer_healthy = matches!(client.get(&health_url).send().await, Ok(r) if r.status().is_success());
         
-        match client.get(&url).send().await {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    // Try to parse real status
-                    if let Ok(real_status) = resp.json::<NodeStatus>().await {
-                        status = real_status;
-                        status.is_online = true; // Confirmed by relayer
-                        status.relayer_connected = true;
-                        status.network_status = "connected".to_string();
+        if relayer_healthy {
+            // Correct relayer endpoint: /api/v1/nodes/{node_id}
+            let node_id = wallet_addr.trim_start_matches("0x").chars().filter(|c| c.is_alphanumeric()).take(24).collect::<String>();
+            let node_id = if node_id.is_empty() { wallet_addr.clone() } else { node_id };
+            let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
+            
+            match client.get(&url).send().await {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        // Try to parse real status from relayer
+                        if let Ok(real_status) = resp.json::<NodeStatus>().await {
+                            status = real_status;
+                            status.is_online = true; // Confirmed by relayer
+                            status.relayer_connected = true;
+                            status.network_status = "connected".to_string();
+                        } else {
+                            // Process running, relayer healthy, but can't parse response
+                            status.is_online = true; // Process is running
+                            status.relayer_connected = true;
+                            status.network_status = "connected".to_string();
+                        }
                     } else {
-                        // Process running but can't parse response
-                        status.is_online = false;
-                        status.relayer_connected = false;
+                        // Process running but not found in relayer (might still be registering)
+                        status.is_online = true; // Process is running
+                        status.relayer_connected = true;
                         status.network_status = "connected_unregistered".to_string();
                     }
-                } else {
-                    // Process running but not found in relayer
-                    status.is_online = false;
-                    status.relayer_connected = false;
-                    status.network_status = "connected_unregistered".to_string();
+                },
+                Err(_) => {
+                    // Process running, relayer healthy, but node lookup failed
+                    status.is_online = true; // Process is running
+                    status.relayer_connected = true;
+                    status.network_status = "connecting".to_string();
                 }
-            },
-            Err(_) => {
-                // Keep local status but mark relayer disconnected
-                status.is_online = false;
-                status.relayer_connected = false;
-                status.network_status = "connecting".to_string();
             }
+        } else {
+            // Process running but relayer unreachable
+            status.is_online = true; // Process is still running locally
+            status.relayer_connected = false;
+            status.network_status = "connecting".to_string();
         }
     }
 

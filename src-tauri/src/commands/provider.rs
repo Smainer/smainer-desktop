@@ -469,3 +469,61 @@ fn validate_model_requirements(
         performance_tier: performance_tier.to_string(),
     }
 }
+
+/// BUG FIX: Install Ollama on Windows
+#[command]
+pub async fn install_ollama() -> Result<String, String> {
+    #[cfg(target_os = "windows")]
+    {
+        tracing::info!("Starting Ollama installation for Windows...");
+        
+        // Download installer to temp directory
+        let temp_dir = std::env::temp_dir();
+        let installer_path = temp_dir.join("OllamaSetup.exe");
+        
+        tracing::info!("Downloading Ollama installer to {:?}...", installer_path);
+        
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(300)) // 5 min timeout for download
+            .build()
+            .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+            
+        let response = client
+            .get("https://ollama.com/download/OllamaSetup.exe")
+            .send()
+            .await
+            .map_err(|e| format!("Failed to download Ollama installer: {}", e))?;
+        
+        if !response.status().is_success() {
+            return Err(format!("Failed to download Ollama installer: HTTP {}", response.status()));
+        }
+        
+        let bytes = response.bytes().await.map_err(|e| format!("Failed to read installer bytes: {}", e))?;
+        
+        fs::write(&installer_path, bytes).map_err(|e| format!("Failed to save installer: {}", e))?;
+        
+        tracing::info!("Running Ollama installer silently...");
+        
+        // Run installer silently
+        let output = std::process::Command::new(&installer_path)
+            .arg("/S") // Silent install flag for NSIS installer
+            .output()
+            .map_err(|e| format!("Failed to run Ollama installer: {}", e))?;
+        
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("Ollama installation failed: {}", stderr));
+        }
+        
+        // Clean up installer
+        let _ = fs::remove_file(&installer_path);
+        
+        tracing::info!("Ollama installation completed successfully");
+        Ok("Ollama installed successfully".to_string())
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Automatic Ollama installation is only supported on Windows. Please install Ollama manually from https://ollama.com/download".to_string())
+    }
+}
