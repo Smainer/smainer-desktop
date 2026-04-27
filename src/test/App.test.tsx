@@ -143,7 +143,7 @@ describe('App - Onboarding Step Stability', () => {
     expect(mockInvoke).not.toHaveBeenCalled()
   })
 
-  it('should resume from registration step when wallet exists but not registered', async () => {
+  it('should resume from wallet step when wallet exists but not registered', async () => {
     const mockInvoke = vi.mocked(invoke)
     mockInvoke
       .mockResolvedValueOnce('0x1234567890abcdef') // wallet exists
@@ -157,8 +157,10 @@ describe('App - Onboarding Step Stability', () => {
       </QueryClientProvider>
     )
 
+    // Should resume at wallet setup step (2), not node registration step (3)
+    // This allows user to review/regenerate wallet before registration
     await waitFor(() => {
-      expect(screen.getByTestId('node-registration')).toBeInTheDocument()
+      expect(screen.getByTestId('wallet-setup')).toBeInTheDocument()
     })
 
     expect(mockInvoke).toHaveBeenCalledWith('get_wallet_address')

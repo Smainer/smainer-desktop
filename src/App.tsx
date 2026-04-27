@@ -66,10 +66,11 @@ function AppContent() {
               nodeId: nodeStatus?.node_id || null,
             }));
           } else {
-            // Wallet exists but not registered - start from registration step
+            // Wallet exists but not registered - resume from wallet step to allow review/regeneration
+            // before proceeding to node registration (prevents auto-surfacing old persisted wallets)
             setAppState(prev => ({
               ...prev,
-              currentStep: 3,
+              currentStep: 2,
               walletAddress,
             }));
           }
