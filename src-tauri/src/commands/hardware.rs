@@ -3,6 +3,9 @@ use tauri::command;
 use anyhow::Result;
 use crate::models::{HardwareInfo, GpuInfo, SystemRequirements};
 
+#[cfg(target_os = "linux")]
+use std::process::Command;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SystemInfo {
     pub cpu_name: String,
@@ -129,20 +132,88 @@ fn detect_gpus_windows() -> Result<Vec<GpuInfo>> {
     Ok(gpus)
 }
 
+#[cfg(target_os = "windows")]
+fn get_total_ram_bytes() -> u64 {
+    use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    unsafe {
+        let mut mem_status: MEMORYSTATUSEX = std::mem::zeroed();
+        mem_status.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+        
+        if GlobalMemoryStatusEx(&mut mem_status).is_ok() {
+            mem_status.ullTotalPhys
+        } else {
+            0
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn get_available_ram_bytes() -> u64 {
+    use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+    unsafe {
+        let mut mem_status: MEMORYSTATUSEX = std::mem::zeroed();
+        mem_status.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
+        
+        if GlobalMemoryStatusEx(&mut mem_status).is_ok() {
+            mem_status.ullAvailPhys
+        } else {
+            0
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn get_total_ram_bytes() -> u64 {
+    if let Ok(content) = std::fs::read_to_string("/proc/meminfo") {
+        for line in content.lines() {
+            if line.starts_with("MemTotal:") {
+                if let Some(kb_str) = line.split_whitespace().nth(1) {
+                    if let Ok(kb) = kb_str.parse::<u64>() {
+                        return kb * 1024; // kB → bytes
+                    }
+                }
+            }
+        }
+    }
+    0
+}
+
+#[cfg(target_os = "linux")]
+fn get_available_ram_bytes() -> u64 {
+    if let Ok(content) = std::fs::read_to_string("/proc/meminfo") {
+        for line in content.lines() {
+            if line.starts_with("MemAvailable:") {
+                if let Some(kb_str) = line.split_whitespace().nth(1) {
+                    if let Ok(kb) = kb_str.parse::<u64>() {
+                        return kb * 1024; // kB → bytes
+                    }
+                }
+            }
+        }
+    }
+    0
+}
+
+#[cfg(target_os = "macos")]
+fn get_total_ram_bytes() -> u64 {
+    0 // Unsupported on macOS
+}
+
+#[cfg(target_os = "macos")]
+fn get_available_ram_bytes() -> u64 {
+    0 // Unsupported on macOS
+}
+
 #[command]
 pub async fn get_system_info() -> Result<SystemInfo, String> {
     tracing::info!("Getting system information...");
     let gpus = detect_gpus().await?;
     
-    // Simple cross-platform CPU/RAM info if sysinfo crate not used
-    // For now returning placeholders or basic implementation
-    // Ideally use sysinfo crate
-    
     Ok(SystemInfo {
         cpu_name: "Detected CPU".to_string(),
-        cpu_cores: num_cpus::get() as u32, // Use num_cpus crate if available, else standard
-        total_ram: 0, // Hard without sysinfo
-        available_ram: 0,
+        cpu_cores: num_cpus::get() as u32,
+        total_ram: get_total_ram_bytes(),
+        available_ram: get_available_ram_bytes(),
         gpus,
         os: std::env::consts::OS.to_string(),
         os_version: "Unknown".to_string(),
