@@ -72,11 +72,14 @@
       "nsis": {
         "installMode": "currentUser",
         "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null,
         "languages": [
           "English"
         ],
         "displayLanguageSelector": false,
-        "compression": "lzma"
+        "compression": "lzma",
+        "installerHooks": "nsis/hooks.nsh"
       }
     },
     "publisher": "Smainer Team",

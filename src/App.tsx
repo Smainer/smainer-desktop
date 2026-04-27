@@ -51,14 +51,18 @@ function AppContent() {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
         
-        // Check if wallet exists
+        // Check if wallet exists first
         const walletAddress = await invoke<string>('get_wallet_address').catch(() => null);
         
         if (walletAddress) {
-          // Check if node is actually registered with the relayer
-          const registrationStatus = await invoke<boolean>('check_registration_status', { walletAddress }).catch(() => false);
+          // Wallet exists - check provider daemon status for registration indication
+          const providerStatus = await invoke<any>('get_provider_status').catch(() => ({ 
+            is_running: false, 
+            relayer_connected: false 
+          }));
           
-          if (registrationStatus) {
+          if (providerStatus.is_running && providerStatus.relayer_connected) {
+            // Provider running AND connected to relayer indicates successful registration
             setAppState(prev => ({
               ...prev,
               onboardingComplete: true,
@@ -66,17 +70,30 @@ function AppContent() {
               nodeId: nodeStatus?.node_id || null,
             }));
           } else {
-            // Wallet exists but not registered - resume from wallet step to allow review/regeneration
-            // before proceeding to node registration (prevents auto-surfacing old persisted wallets)
+            // Wallet exists but provider not properly running/connected 
+            // Resume from Node Registration step with clear guidance
             setAppState(prev => ({
               ...prev,
-              currentStep: 2,
+              currentStep: 3, // Skip to registration step
               walletAddress,
             }));
           }
+        } else {
+          // No wallet - start from beginning at System Check
+          setAppState(prev => ({
+            ...prev,
+            currentStep: 0,
+            onboardingComplete: false,
+          }));
         }
       } catch (error) {
         console.warn('Failed to check onboarding status:', error);
+        // On error, start from System Check for safety
+        setAppState(prev => ({
+          ...prev,
+          currentStep: 0,
+          onboardingComplete: false,
+        }));
       }
     };
 

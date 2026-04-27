@@ -270,12 +270,19 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
             {!ollamaAvailable && (
               <Alert>
                 <AlertDescription>
-                  <strong>Action Required:</strong> Ollama is not installed or not running. 
-                  Please install Ollama from <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">ollama.ai</a> 
-                  and ensure it's running before continuing.
+                  <strong>Ollama Required:</strong> AI serving requires the Ollama runtime. 
+                  Enable auto-install below, or follow the <a 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // TODO: Open OLLAMA_INSTALL_GUIDE.md in system viewer
+                      console.log('Opening Ollama install guide...');
+                    }}
+                    className="text-blue-600 hover:underline"
+                  >installation guide</a> for manual setup.
                   <br /><br />
-                  <strong>Why we ask:</strong> Ollama manages model loading, memory allocation, and inference execution. 
-                  Without it, your node cannot serve AI tasks, resulting in missed earning opportunities.
+                  <strong>Why Ollama:</strong> Manages AI model loading and inference execution. 
+                  Without it, your node cannot serve AI tasks and will miss high-value earning opportunities.
                 </AlertDescription>
               </Alert>
             )}
@@ -296,7 +303,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
                 disabled={ollamaAvailable ?? false}
               />
               <Label htmlFor="ollama-install">
-                {ollamaAvailable ? "Ollama detected and available" : "Install Ollama automatically (if possible)"}
+                {ollamaAvailable ? "Ollama runtime detected" : "Auto-install Ollama runtime"}
               </Label>
             </div>
           </CardContent>

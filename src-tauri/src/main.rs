@@ -11,7 +11,7 @@ mod commands;
 mod models;
 mod utils;
 
-use commands::{hardware, provider, wallet, monitoring};
+use commands::{hardware, provider, wallet, monitoring, cleanup};
 
 #[tokio::main]
 async fn main() {
@@ -60,7 +60,12 @@ async fn main() {
             // Monitoring commands
             monitoring::get_node_status,
             monitoring::get_earnings,
-            monitoring::get_task_history
+            monitoring::get_task_history,
+            
+            // Cleanup commands
+            cleanup::cleanup_app_data,
+            cleanup::check_app_data_exists,
+            cleanup::get_app_data_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

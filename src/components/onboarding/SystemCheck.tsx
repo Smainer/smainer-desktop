@@ -29,9 +29,9 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
   if (reqError) {
     return (
       <div className="text-center">
-        <h2 className="text-2xl font-bold mb-4 text-red-600">System Check Failed</h2>
-        <p className="text-muted-foreground mb-8">Unable to analyze your system. Please try again.</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
+        <h2 className="text-2xl font-bold mb-4 text-red-600">Hardware Detection Failed</h2>
+        <p className="text-muted-foreground mb-8">Cannot analyze system capabilities. Restart the application or check system permissions.</p>
+        <Button onClick={() => window.location.reload()}>Restart System Check</Button>
       </div>
     )
   }
@@ -45,9 +45,9 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-4">System Requirements Check</h2>
+        <h2 className="text-2xl font-bold mb-4">Hardware Validation</h2>
         <p className="text-muted-foreground">
-          Let's make sure your system can run a Smainer provider node effectively.
+          Verify your system meets requirements for stable provider operation and optimal earnings.
         </p>
       </div>
 
@@ -158,12 +158,12 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
       }`}>
         <CardHeader>
           <CardTitle className={requirements?.meets_requirements ? 'text-green-800' : 'text-red-800'}>
-            {requirements?.meets_requirements ? 'System Ready!' : 'System Issues Detected'}
+            {requirements?.meets_requirements ? 'Hardware Ready' : 'Requirements Not Met'}
           </CardTitle>
           <CardDescription>
             {requirements?.meets_requirements 
-              ? 'Your system meets all requirements for running a Smainer provider node.'
-              : 'Some issues were found that may affect performance or prevent operation.'
+              ? 'System meets all requirements for provider node operation.'
+              : 'Hardware issues detected that will affect node performance or prevent operation.'
             }
           </CardDescription>
         </CardHeader>
@@ -175,7 +175,7 @@ export default function SystemCheck({ onNext }: SystemCheckProps) {
           disabled={!requirements?.meets_requirements}
           className="px-8"
         >
-          {requirements?.meets_requirements ? 'Continue to Wallet Setup' : 'Fix Issues First'}
+          {requirements?.meets_requirements ? 'Continue Setup' : 'Fix Hardware Issues'}
         </Button>
       </div>
     </div>

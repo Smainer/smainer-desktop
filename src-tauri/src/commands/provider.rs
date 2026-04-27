@@ -32,13 +32,6 @@ pub struct ProviderConfig {
     pub auto_start: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RegistrationRequest {
-    pub wallet_address: String,
-    pub hardware_info: String,
-    pub stake_amount: Option<u64>,
-}
-
 /// Convert HTTP(S) URL to WebSocket URL for provider sidecar
 fn http_to_ws_url(url: &str) -> String {
     if url.starts_with("https://") {
@@ -211,42 +204,45 @@ pub async fn get_provider_status(state: State<'_, ProviderState>) -> Result<Prov
     })
 }
 
+/// Register node by starting the provider daemon.
+/// WebSocket registration to the relayer is handled automatically by the provider daemon
+/// after it starts (using RELAYER_WS_URL, NODE_ID, and wallet credentials).
 #[command]
-pub async fn register_node(registration: NodeRegistration) -> Result<String, String> {
+pub async fn register_node(
+    registration: NodeRegistration,
+    state: State<'_, ProviderState>
+) -> Result<String, String> {
     tracing::info!("Registering node: {:?}", registration);
     
-    let client = reqwest::Client::new();
-    
-    let registration_request = RegistrationRequest {
+    // Build provider configuration from registration data
+    let config = ProviderConfig {
         wallet_address: registration.wallet_address.clone(),
-        hardware_info: serde_json::to_string(&registration.hardware_capabilities)
-            .map_err(|e| format!("Failed to serialize hardware info: {}", e))?,
-        stake_amount: registration.stake_amount,
+        relayer_url: registration.relayer_endpoint
+            .unwrap_or_else(|| "https://api.smainer.io".to_string()),
+        port: 8080,
+        max_tasks: 1,
+        gpu_enabled: true,
+        auto_start: true,
     };
     
-    let relayer_url = registration.relayer_endpoint
-        .unwrap_or_else(|| "https://api.smainer.io".to_string());
-        
-    let url = format!("{}/register", relayer_url); // Endpoint assumption
+    // Start the provider daemon - it will perform WebSocket registration automatically
+    start_provider(config.clone(), state).await
+        .map_err(|e| format!("Failed to start provider daemon: {}. Ensure the provider binary is installed.", e))?;
     
-    let response = client.post(&url)
-        .json(&registration_request)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to relayer: {}", e))?;
-        
-    if response.status().is_success() {
-        Ok("success".to_string())
-    } else {
-        Err(format!("Registration failed: {}", response.status()))
-    }
+    // Return the derived node ID
+    let node_id = node_id_from_address(&registration.wallet_address);
+    tracing::info!("Provider daemon started successfully with node_id: {}", node_id);
+    Ok(node_id)
 }
 
 #[command]
-pub async fn check_registration_status(wallet_address: String) -> Result<bool, String> {
-    tracing::info!("Checking registration status for wallet: {}", &wallet_address[..6]);
+pub async fn check_registration_status(wallet_address: String) -> Result<String, String> {
+    tracing::debug!("Checking registration status for wallet: {}...", &wallet_address[..std::cmp::min(6, wallet_address.len())]);
     
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     let relayer_url = "https://api.smainer.io";
     
     // Derive node_id from wallet address
@@ -255,17 +251,24 @@ pub async fn check_registration_status(wallet_address: String) -> Result<bool, S
     
     match client.get(&url).send().await {
         Ok(response) => {
+            let status_code = response.status().as_u16();
             if response.status().is_success() {
-                Ok(true)
-            } else if response.status().as_u16() == 404 {
-                Ok(false) // Not registered
+                tracing::debug!("Node {} found in relayer", node_id);
+                Ok("registered".to_string())
+            } else if status_code == 404 {
+                tracing::debug!("Node {} not found in relayer (404)", node_id);
+                Ok("not_registered".to_string()) // Not registered - this is a valid state
+            } else if status_code == 401 {
+                tracing::debug!("Authentication required for node lookup (401)");
+                Ok("auth_required".to_string()) // Unauthenticated - cannot determine status
             } else {
-                Ok(false) // Assume not registered on other errors
+                tracing::debug!("Unexpected status code {} for node lookup", status_code);
+                Ok("unknown".to_string()) // Unknown state
             }
         }
-        Err(_) => {
-            // Network error - assume not registered for safety
-            Ok(false)
+        Err(e) => {
+            tracing::debug!("Network error checking registration status: {}", e);
+            Ok("network_error".to_string()) // Network error - cannot determine status
         }
     }
 }

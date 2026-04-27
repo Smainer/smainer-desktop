@@ -18,7 +18,7 @@ export default function NodeRegistration({
   onComplete, 
   onBack 
 }: NodeRegistrationProps) {
-  const [relayerUrl, setRelayerUrl] = useState(import.meta.env.VITE_RELAYER_URL || 'https://api.smainer.io')
+  const [relayerUrl, setRelayerUrl] = useState((import.meta as any).env?.VITE_RELAYER_URL || 'https://api.smainer.io')
   const [nodeName, setNodeName] = useState('')
   const [autoStart, setAutoStart] = useState(true)
   const [contactInfo, setContactInfo] = useState('')
@@ -27,7 +27,12 @@ export default function NodeRegistration({
 
   const handleRegister = () => {
     if (!hardwareInfo) {
-      toast.error('Hardware information not available')
+      toast.error('Hardware detection incomplete. Please restart the application.')
+      return
+    }
+
+    if (!relayerUrl.trim()) {
+      toast.error('Relayer endpoint required. Please enter a valid URL.')
       return
     }
 
@@ -39,9 +44,24 @@ export default function NodeRegistration({
       contact_info: contactInfo || undefined,
     }
 
+    toast.info('Starting provider daemon and registering with network...')
+
     registerNode.mutate(registration, {
       onSuccess: (nodeId) => {
+        toast.success('Node registered successfully! Provider daemon started.')
         onComplete(walletAddress, nodeId)
+      },
+      onError: (error: any) => {
+        const errorMsg = error.toString()
+        if (errorMsg.includes('provider daemon')) {
+          toast.error('Provider daemon not found. Download the installer version or set SMAINER_PROVIDER_CMD environment variable.')
+        } else if (errorMsg.includes('wallet')) {
+          toast.error('Wallet access error. Check your wallet configuration and try again.')
+        } else if (errorMsg.includes('network') || errorMsg.includes('timeout')) {
+          toast.error('Network connection failed. Check your internet connection and relayer endpoint.')
+        } else {
+          toast.error(`Registration failed: ${errorMsg}`)
+        }
       }
     })
   }
@@ -53,9 +73,9 @@ export default function NodeRegistration({
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-4">Register Your Node</h2>
+        <h2 className="text-2xl font-bold mb-4">Register Provider Node</h2>
         <p className="text-muted-foreground">
-          Register your provider node with the Smainer network to start earning.
+          Connect your node to the Smainer network. This starts the provider daemon and registers your hardware capabilities for task assignment.
         </p>
       </div>
 
@@ -63,20 +83,24 @@ export default function NodeRegistration({
         <CardHeader>
           <CardTitle className="text-primary">Your Node Overview</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            {/* Wallet Address - always full width to prevent overlap */}
             <div>
-              <span className="text-muted-foreground">Wallet Address:</span>
-              <p className="font-mono text-xs mt-1 bg-muted p-2 rounded border border-border">
+              <span className="text-muted-foreground text-sm">Wallet Address:</span>
+              <p className="font-mono text-xs mt-1 bg-muted p-2 rounded border border-border break-all word-break-all">
                 {walletAddress}
               </p>
             </div>
+            
+            {/* System Specs - separate row */}
             <div>
-              <span className="text-muted-foreground">System Specs:</span>
-              <ul className="mt-1 space-y-1 text-xs">
-                <li>{ramGB}GB RAM, {hardwareInfo?.cpu_cores} CPU cores</li>
-                <li>{supportedGpus.length} GPU(s), {Math.round(totalVram / 1024)}GB VRAM</li>
-                <li>{hardwareInfo?.os} {hardwareInfo?.os_version}</li>
+              <span className="text-muted-foreground text-sm">System Specifications:</span>
+              <ul className="mt-1 space-y-1 text-xs bg-muted p-2 rounded border border-border">
+                <li><strong>RAM:</strong> {ramGB}GB total</li>
+                <li><strong>CPU:</strong> {hardwareInfo?.cpu_cores} cores</li>
+                <li><strong>GPU:</strong> {supportedGpus.length} device(s), {Math.round(totalVram / 1024)}GB VRAM total</li>
+                <li><strong>OS:</strong> {hardwareInfo?.os} {hardwareInfo?.os_version}</li>
               </ul>
             </div>
           </div>

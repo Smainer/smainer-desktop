@@ -147,7 +147,7 @@ describe('App - Onboarding Step Stability', () => {
     const mockInvoke = vi.mocked(invoke)
     mockInvoke
       .mockResolvedValueOnce('0x1234567890abcdef') // wallet exists
-      .mockResolvedValueOnce(false) // not registered
+      .mockResolvedValueOnce({ is_running: false, relayer_connected: false }) // provider not running
     
     const queryClient = createTestQueryClient()
     
@@ -164,8 +164,6 @@ describe('App - Onboarding Step Stability', () => {
     })
 
     expect(mockInvoke).toHaveBeenCalledWith('get_wallet_address')
-    expect(mockInvoke).toHaveBeenCalledWith('check_registration_status', {
-      walletAddress: '0x1234567890abcdef',
-    })
+    expect(mockInvoke).toHaveBeenCalledWith('get_provider_status')
   })
 })
