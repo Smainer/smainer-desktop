@@ -53,6 +53,7 @@ async fn main() {
             
             // Wallet commands
             wallet::generate_wallet,
+            wallet::import_wallet,
             wallet::get_wallet_address,
             wallet::sign_message,
             

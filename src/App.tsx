@@ -45,7 +45,7 @@ function AppContent() {
   const { data: nodeStatus } = useNodeStatus();
   const { data: hardwareInfo } = useHardwareInfo();
 
-  // Check if onboarding is complete on app start
+  // Check if onboarding is complete on app start - run only once on mount
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       try {
@@ -66,10 +66,10 @@ function AppContent() {
               nodeId: nodeStatus?.node_id || null,
             }));
           } else {
-            // Wallet exists but not registered - start from wallet setup
+            // Wallet exists but not registered - start from registration step
             setAppState(prev => ({
               ...prev,
-              currentStep: 1,
+              currentStep: 3,
               walletAddress,
             }));
           }
@@ -80,7 +80,8 @@ function AppContent() {
     };
 
     checkOnboardingStatus();
-  }, [nodeStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount, not on every nodeStatus change
 
   const handleOnboardingComplete = (walletAddress: string, nodeId: string) => {
     setAppState({

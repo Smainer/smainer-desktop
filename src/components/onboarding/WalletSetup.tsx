@@ -91,7 +91,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-4">Wallet Setup</h2>
         <p className="text-muted-foreground">
-          Create or import a wallet to receive earnings from your provider node.
+          Your Starknet wallet address is where you'll receive earnings. We'll securely store your private key locally.
         </p>
       </div>
 
@@ -134,7 +134,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Optional Password Protection
+                Encryption Password (Optional)
               </label>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -144,7 +144,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Leave empty to skip password protection
+                Optional: Encrypt your locally-stored private key with a password for extra security
               </p>
             </div>
 
@@ -187,7 +187,7 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
-                Private Key
+                Your Starknet Private Key
               </label>
               <textarea
                 placeholder="0x1234567890abcdef..."
@@ -196,13 +196,13 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 className="w-full h-24 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring font-mono text-sm resize-none"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Enter your 64-character hex private key starting with '0x'
+                Paste your existing Starknet private key (66 hex characters starting with 0x)
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Password Protection (Optional)
+                Encryption Password (Optional)
               </label>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -211,6 +211,9 @@ export default function WalletSetup({ onNext, onBack }: WalletSetupProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Optional: Encrypt your imported private key with a password for extra security
+              </p>
             </div>
 
             {password && (

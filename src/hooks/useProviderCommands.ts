@@ -64,12 +64,3 @@ export function useRegisterNode() {
     },
   })
 }
-
-export function useProviderLogs() {
-  return useQuery({
-    queryKey: ['providerLogs'],
-    queryFn: () => invoke<string[]>('get_provider_logs'),
-    refetchInterval: 5000,
-    retry: 1,
-  })
-}

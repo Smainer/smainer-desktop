@@ -94,6 +94,57 @@ pub async fn get_wallet_address() -> Result<String, String> {
 }
 
 #[command]
+pub async fn import_wallet(private_key: String, password: Option<String>) -> Result<WalletInfo, String> {
+    tracing::info!("Importing wallet...");
+    
+    // Validate private key format
+    let stripped = private_key.trim().trim_start_matches("0x");
+    if stripped.len() != 64 {
+        return Err("Invalid private key format. Expected 64 hex characters (with or without 0x prefix).".to_string());
+    }
+    
+    if !stripped.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err("Invalid private key format. Must contain only hexadecimal characters.".to_string());
+    }
+    
+    // Parse private key
+    let private_key_hex = format!("0x{}", stripped);
+    let private_key_scalar = FieldElement::from_hex_be(&private_key_hex)
+        .map_err(|e| format!("Failed to parse private key: {}", e))?;
+    
+    let signing_key = SigningKey::from_secret_scalar(private_key_scalar);
+    let public_key = signing_key.verifying_key();
+    let public_key_scalar = public_key.scalar();
+    
+    // Use public key as address identity
+    let address = public_key_scalar;
+    let address_hex = format!("{:#x}", address);
+    let public_key_hex = format!("{:#x}", public_key_scalar);
+    
+    let wallet_info = WalletInfo {
+        address: address_hex.clone(),
+        public_key: public_key_hex.clone(),
+        created_at: chrono::Utc::now(),
+        encrypted: password.is_some(),
+    };
+    
+    // Store wallet
+    let stored = StoredWallet {
+        private_key: private_key_hex,
+        public_key: public_key_hex,
+        address: address_hex,
+        encrypted: password.is_some(),
+        salt: None,
+    };
+    
+    let json = serde_json::to_string_pretty(&stored).map_err(|e| e.to_string())?;
+    let path = get_wallet_path();
+    fs::write(path, json).map_err(|e| e.to_string())?;
+    
+    Ok(wallet_info)
+}
+
+#[command]
 pub async fn sign_message(message: String, _password: Option<String>) -> Result<SignatureResult, String> {
     tracing::info!("Signing message...");
     let path = get_wallet_path();

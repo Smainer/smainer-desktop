@@ -91,6 +91,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
   const [validationResult, setValidationResult] = useState<any>(null)
   const [isValidating, setIsValidating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [acknowledgedRisks, setAcknowledgedRisks] = useState(false)
   
   const { data: hardware } = useHardwareInfo()
 
@@ -103,6 +104,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
     if (config.ai_serving_enabled) {
       validateConfiguration()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config])
 
   const loadExistingConfig = async () => {
@@ -461,13 +463,35 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
         </Card>
       )}
 
+      {/* Risk Acknowledgment for AI Setup with Validation Errors */}
+      {config.ai_serving_enabled && validationResult?.system_validation?.errors?.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="acknowledge-risks"
+                checked={acknowledgedRisks}
+                onCheckedChange={(checked: boolean) => setAcknowledgedRisks(checked)}
+              />
+              <Label htmlFor="acknowledge-risks" className="text-sm">
+                I understand the configuration issues above and want to proceed anyway. I can install Ollama later or skip AI serving.
+              </Label>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-between">
         <Button variant="outline" onClick={onBack}>
           Back to System Check
         </Button>
         <Button
           onClick={handleSaveAndContinue}
-          disabled={isSaving || isValidating || (config.ai_serving_enabled && validationResult?.system_validation?.errors?.length > 0)}
+          disabled={
+            isSaving || 
+            isValidating || 
+            (config.ai_serving_enabled && validationResult?.system_validation?.errors?.length > 0 && !acknowledgedRisks)
+          }
         >
           {isSaving ? "Saving..." : "Continue to Wallet Setup"}
         </Button>
