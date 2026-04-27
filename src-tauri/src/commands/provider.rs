@@ -5,6 +5,7 @@ use std::process::{Command, Stdio, Child};
 use std::sync::Mutex;
 use std::fs;
 use std::path::PathBuf;
+use std::io::Write;
 use crate::models::{ProviderStatus, NodeRegistration, AICapabilityConfig, AICapabilityReport, SystemValidation, ModelValidation, CompatibilityStatus};
 
 // Global state managed by Tauri
@@ -58,6 +59,18 @@ fn node_id_from_address(addr: &str) -> String {
     let stripped = addr.trim_start_matches("0x");
     let id: String = stripped.chars().filter(|c| c.is_alphanumeric()).take(24).collect();
     if id.is_empty() { "default-node".to_string() } else { id }
+}
+
+/// Get the provider daemon log file path
+fn get_provider_log_path() -> std::path::PathBuf {
+    let base = if cfg!(target_os = "windows") {
+        std::env::var("APPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default())
+    } else {
+        dirs::home_dir().unwrap_or_default()
+    };
+    base.join(".smainer").join("provider.log")
 }
 
 #[command]
@@ -141,11 +154,62 @@ pub async fn start_provider(
     if let Some(pk) = read_wallet_private_key() {
         cmd.env("STARKNET_PRIVATE_KEY", pk);
     }
+    
+    // Fix 2: Set writable working directory for daemon
+    let working_dir = if cfg!(target_os = "windows") {
+        std::env::var("APPDATA")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default())
+            .join("smainer")
+    } else {
+        dirs::home_dir().unwrap_or_default().join(".smainer")
+    };
+    let _ = std::fs::create_dir_all(&working_dir);
+    cmd.current_dir(&working_dir);
+    cmd.env("SANDBOX_TEMP_DIR", working_dir.to_string_lossy().as_ref());
+    
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
     match cmd.spawn() {
-        Ok(child) => {
+        Ok(mut child) => {
+            // Fix 1: Capture daemon stdout/stderr into a log file
+            // Capture stdout into background thread
+            if let Some(stdout) = child.stdout.take() {
+                let log_path = get_provider_log_path();
+                std::thread::spawn(move || {
+                    use std::io::BufRead;
+                    let reader = std::io::BufReader::new(stdout);
+                    if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log_path)
+                    {
+                        for line in reader.lines().flatten() {
+                            let _ = writeln!(file, "[STDOUT] {}", line);
+                        }
+                    }
+                });
+            }
+
+            // Capture stderr into background thread
+            if let Some(stderr) = child.stderr.take() {
+                let log_path = get_provider_log_path();
+                std::thread::spawn(move || {
+                    use std::io::BufRead;
+                    let reader = std::io::BufReader::new(stderr);
+                    if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log_path)
+                    {
+                        for line in reader.lines().flatten() {
+                            let _ = writeln!(file, "[STDERR] {}", line);
+                        }
+                    }
+                });
+            }
+            
             *process_guard = Some(child);
             tracing::info!("Provider started successfully");
             Ok(true)
@@ -537,4 +601,10 @@ pub async fn install_ollama() -> Result<String, String> {
     {
         Err("Automatic Ollama installation is only supported on Windows. Please install Ollama manually from https://ollama.com/download".to_string())
     }
+}
+
+/// Fix 3: Expose log path to frontend
+#[tauri::command]
+pub fn get_provider_log_path_cmd() -> String {
+    get_provider_log_path().to_string_lossy().to_string()
 }
