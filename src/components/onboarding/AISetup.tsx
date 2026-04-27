@@ -197,6 +197,15 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
 
   const compatibility = getSystemCompatibility()
 
+  const validationErrors: string[] = validationResult?.system_validation?.errors || []
+  const hasValidationErrors = config.ai_serving_enabled && validationErrors.length > 0
+  const hasOnlyOllamaAvailabilityErrors =
+    hasValidationErrors &&
+    validationErrors.every((error: string) => error.toLowerCase().includes('ollama'))
+  const allowProceedWithAutoInstall =
+    hasOnlyOllamaAvailabilityErrors &&
+    !!config.ollama_config?.install_requested
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -464,7 +473,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
       )}
 
       {/* Risk Acknowledgment for AI Setup with Validation Errors */}
-      {config.ai_serving_enabled && validationResult?.system_validation?.errors?.length > 0 && (
+      {hasValidationErrors && !allowProceedWithAutoInstall && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
@@ -481,6 +490,14 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
         </Card>
       )}
 
+      {allowProceedWithAutoInstall && (
+        <Alert>
+          <AlertDescription>
+            Auto-install was selected. You can continue now and finish Ollama setup after onboarding if needed.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex justify-between">
         <Button variant="outline" onClick={onBack}>
           Back to System Check
@@ -488,9 +505,9 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
         <Button
           onClick={handleSaveAndContinue}
           disabled={
-            isSaving || 
-            isValidating || 
-            (config.ai_serving_enabled && validationResult?.system_validation?.errors?.length > 0 && !acknowledgedRisks)
+            isSaving ||
+            isValidating ||
+            (hasValidationErrors && !allowProceedWithAutoInstall && !acknowledgedRisks)
           }
         >
           {isSaving ? "Saving..." : "Continue to Wallet Setup"}

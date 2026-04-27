@@ -63,7 +63,7 @@ describe('AISetup - Continue Button Behavior', () => {
     })
   })
 
-  it('should allow continue when install Ollama is checked and user acknowledges risks', async () => {
+  it('should allow continue when Ollama auto-install is checked without requiring risk acknowledgment', async () => {
     const user = userEvent.setup()
     const onNext = vi.fn()
     const onBack = vi.fn()
@@ -116,20 +116,18 @@ describe('AISetup - Continue Button Behavior', () => {
       expect(screen.getAllByText(/Configuration Issues/i).length).toBeGreaterThan(0)
     })
 
-    // Continue button should be disabled initially
+    // Auto-install checkbox should be checked by default (Ollama not available)
+    const autoInstallCheckbox = await screen.findByLabelText(/Install Ollama automatically/i)
+    expect(autoInstallCheckbox).toBeChecked()
+
+    // Continue button should be enabled WITHOUT acknowledgment
     const continueButton = screen.getByText('Continue to Wallet Setup')
-    expect(continueButton).toBeDisabled()
-
-    // Acknowledge risks
-    const acknowledgeCheckbox = await screen.findByLabelText(
-      /I understand the configuration issues/i
-    )
-    await user.click(acknowledgeCheckbox)
-
-    // Now continue button should be enabled
     await waitFor(() => {
       expect(continueButton).not.toBeDisabled()
     })
+
+    // Verify auto-install info alert is shown
+    expect(screen.getByText(/Auto-install was selected/i)).toBeInTheDocument()
 
     // Click continue
     await user.click(continueButton)
@@ -140,7 +138,7 @@ describe('AISetup - Continue Button Behavior', () => {
     })
   })
 
-  it('should keep continue disabled when validation errors exist and risks not acknowledged', async () => {
+  it('should require acknowledgment when auto-install is unchecked', async () => {
     const user = userEvent.setup()
     const onNext = vi.fn()
     const onBack = vi.fn()
@@ -169,6 +167,9 @@ describe('AISetup - Continue Button Behavior', () => {
           compatibility_status: 'Incompatible',
         })
       }
+      if (cmd === 'save_ai_config') {
+        return Promise.resolve(undefined)
+      }
       return Promise.reject(new Error('Unknown command'))
     })
 
@@ -189,8 +190,33 @@ describe('AISetup - Continue Button Behavior', () => {
       expect(screen.getAllByText(/Configuration Issues/i).length).toBeGreaterThan(0)
     })
 
-    // Continue button should remain disabled without acknowledgment
+    // Uncheck auto-install
+    const autoInstallCheckbox = await screen.findByLabelText(/Install Ollama automatically/i)
+    await user.click(autoInstallCheckbox)
+
+    // Continue button should be disabled without acknowledgment
     const continueButton = screen.getByText('Continue to Wallet Setup')
-    expect(continueButton).toBeDisabled()
+    await waitFor(() => {
+      expect(continueButton).toBeDisabled()
+    })
+
+    // Acknowledge risks
+    const acknowledgeCheckbox = await screen.findByLabelText(
+      /I understand the configuration issues/i
+    )
+    await user.click(acknowledgeCheckbox)
+
+    // Now continue button should be enabled
+    await waitFor(() => {
+      expect(continueButton).not.toBeDisabled()
+    })
+
+    // Click continue
+    await user.click(continueButton)
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('save_ai_config', expect.any(Object))
+      expect(onNext).toHaveBeenCalled()
+    })
   })
 })
