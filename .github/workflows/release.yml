@@ -10,6 +10,9 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      WINDOWS_SIGN_CERT_B64: ${{ secrets.WINDOWS_SIGN_CERT_B64 }}
+      WINDOWS_SIGN_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERT_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +106,7 @@ jobs:
           includeUpdaterJson: false
 
       - name: Sign Windows artifacts
-        if: ${{ secrets.WINDOWS_SIGN_CERT_B64 != '' && secrets.WINDOWS_SIGN_CERT_PASSWORD != '' }}
+        if: ${{ env.WINDOWS_SIGN_CERT_B64 != '' && env.WINDOWS_SIGN_CERT_PASSWORD != '' }}
         shell: pwsh
         env:
           CERT_B64: ${{ secrets.WINDOWS_SIGN_CERT_B64 }}
@@ -186,7 +189,7 @@ jobs:
           Remove-Item $certPath
 
       - name: Upload signed artifacts
-        if: ${{ secrets.WINDOWS_SIGN_CERT_B64 != '' && secrets.WINDOWS_SIGN_CERT_PASSWORD != '' }}
+        if: ${{ env.WINDOWS_SIGN_CERT_B64 != '' && env.WINDOWS_SIGN_CERT_PASSWORD != '' }}
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -201,7 +204,7 @@ jobs:
           Write-Host "✓ Signed artifacts uploaded to release ${{ github.ref_name }}"
 
       - name: Warn about unsigned artifacts
-        if: ${{ secrets.WINDOWS_SIGN_CERT_B64 == '' || secrets.WINDOWS_SIGN_CERT_PASSWORD == '' }}
+        if: ${{ env.WINDOWS_SIGN_CERT_B64 == '' || env.WINDOWS_SIGN_CERT_PASSWORD == '' }}
         shell: pwsh
         run: |
           Write-Warning "════════════════════════════════════════════════════════════════"
