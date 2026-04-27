@@ -57,7 +57,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
     // Default offline status
     let mut status = NodeStatus {
-        is_online: is_running, // BUG FIX: Set online if process is running locally
+        is_online: false, // Only set true when relayer confirms
         node_id: wallet_addr.clone(),
         uptime: 0,
         last_heartbeat: Utc::now(),

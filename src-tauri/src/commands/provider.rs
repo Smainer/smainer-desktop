@@ -88,9 +88,20 @@ pub async fn start_provider(
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_default();
 
-    // 1. Bundled sidecar next to the app exe (production install path)
-    let sidecar_name = if cfg!(target_os = "windows") { "smainer-provider.exe" } else { "smainer-provider" };
-    let sidecar_path = exe_dir.join(sidecar_name);
+    // 1. Bundled sidecar with target triple suffix (Tauri externalBin convention)
+    let sidecar_candidates = if cfg!(target_os = "windows") {
+        vec![
+            exe_dir.join("smainer-provider-x86_64-pc-windows-msvc.exe"),
+            exe_dir.join("smainer-provider.exe"),
+        ]
+    } else {
+        vec![
+            exe_dir.join("smainer-provider-x86_64-unknown-linux-gnu"),
+            exe_dir.join("smainer-provider"),
+        ]
+    };
+
+    let sidecar_path = sidecar_candidates.iter().find(|p| p.exists());
 
     // Check for environment variable override first
     let mut cmd = if let Ok(custom_cmd) = std::env::var("SMAINER_PROVIDER_CMD") {
@@ -110,9 +121,9 @@ pub async fn start_provider(
         }
         
         env_cmd
-    } else if sidecar_path.exists() {
+    } else if let Some(path) = sidecar_path {
         // Production: use bundled sidecar binary
-        Command::new(&sidecar_path)
+        Command::new(path)
     } else {
         // No sidecar and no environment override - return clear error
         return Err("Provider daemon not found. Use the installer build or set SMAINER_PROVIDER_CMD environment variable.".to_string());
