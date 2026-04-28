@@ -546,16 +546,23 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
         <Button variant="outline" onClick={onBack}>
           Back to System Check
         </Button>
-        <Button
-          onClick={handleSaveAndContinue}
-          disabled={
-            isSaving ||
-            isValidating ||
-            (hasValidationErrors && !allowProceedWithAutoInstall && !acknowledgedRisks)
-          }
-        >
-          {isSaving ? "Saving..." : "Continue to Wallet Setup"}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          {isSaving && config.ollama_config?.install_requested && !ollamaAvailable && (
+            <p className="text-sm text-muted-foreground italic">
+              This might take a few minutes...
+            </p>
+          )}
+          <Button
+            onClick={handleSaveAndContinue}
+            disabled={
+              isSaving ||
+              isValidating ||
+              (hasValidationErrors && !allowProceedWithAutoInstall && !acknowledgedRisks)
+            }
+          >
+            {isSaving ? "Saving..." : "Continue to Wallet Setup"}
+          </Button>
+        </div>
       </div>
     </div>
   )

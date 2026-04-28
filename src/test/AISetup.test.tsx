@@ -117,7 +117,7 @@ describe('AISetup - Continue Button Behavior', () => {
     })
 
     // Auto-install checkbox should be checked by default (Ollama not available)
-    const autoInstallCheckbox = await screen.findByLabelText(/Install Ollama automatically/i)
+    const autoInstallCheckbox = await screen.findByLabelText(/Auto-install Ollama runtime/i)
     expect(autoInstallCheckbox).toBeChecked()
 
     // Continue button should be enabled WITHOUT acknowledgment
@@ -191,7 +191,7 @@ describe('AISetup - Continue Button Behavior', () => {
     })
 
     // Uncheck auto-install
-    const autoInstallCheckbox = await screen.findByLabelText(/Install Ollama automatically/i)
+    const autoInstallCheckbox = await screen.findByLabelText(/Auto-install Ollama runtime/i)
     await user.click(autoInstallCheckbox)
 
     // Continue button should be disabled without acknowledgment
@@ -218,5 +218,81 @@ describe('AISetup - Continue Button Behavior', () => {
       expect(mockInvoke).toHaveBeenCalledWith('save_ai_config', expect.any(Object))
       expect(onNext).toHaveBeenCalled()
     })
+  })
+
+  it('should show long-running install message during Ollama auto-install save', async () => {
+    const user = userEvent.setup()
+    const onNext = vi.fn()
+    const onBack = vi.fn()
+    const mockInvoke = vi.mocked(invoke)
+    
+    // Mock Ollama not available
+    vi.mocked(fetch).mockRejectedValue(new Error('Not available'))
+
+    // Mock a slow install_ollama to keep isSaving true
+    let resolveSave: any
+    const savePromise = new Promise((resolve) => { resolveSave = resolve })
+
+    mockInvoke.mockImplementation((cmd: string, args?: any) => {
+      if (cmd === 'load_ai_config') {
+        return Promise.resolve({
+          schema_version: '1.0.0',
+          contract_version: '2024.1',
+          ai_serving_enabled: false,
+          model_preferences: [],
+          privacy_mode: 'Standard',
+          resources: { max_cpu_percent: 80, max_ram_gb: 8 },
+        })
+      }
+      if (cmd === 'validate_ai_capabilities') {
+        return Promise.resolve({
+          system_validation: {
+            errors: ['Ollama runtime not available'],
+            warnings: [],
+          },
+          compatibility_status: 'Incompatible',
+        })
+      }
+      if (cmd === 'save_ai_config') {
+        return savePromise
+      }
+      if (cmd === 'install_ollama') {
+        return savePromise
+      }
+      return Promise.reject(new Error('Unknown command'))
+    })
+
+    const queryClient = createTestQueryClient()
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AISetup onNext={onNext} onBack={onBack} />
+      </QueryClientProvider>
+    )
+
+    // Enable AI serving
+    const enableCheckbox = await screen.findByLabelText(/Enable AI inference serving/)
+    await user.click(enableCheckbox)
+
+    // Wait for validation
+    await waitFor(() => {
+      expect(screen.getAllByText(/Configuration Issues/i).length).toBeGreaterThan(0)
+    })
+
+    // Auto-install should be checked by default
+    const autoInstallCheckbox = await screen.findByLabelText(/Auto-install Ollama runtime/i)
+    expect(autoInstallCheckbox).toBeChecked()
+
+    // Click continue to trigger save with install
+    const continueButton = screen.getByText('Continue to Wallet Setup')
+    await user.click(continueButton)
+
+    // Verify long-running message appears
+    await waitFor(() => {
+      expect(screen.getByText(/This might take a few minutes/i)).toBeInTheDocument()
+    })
+
+    // Clean up - resolve the promise
+    resolveSave(undefined)
   })
 })

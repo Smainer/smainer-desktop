@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import WalletSetup from '../components/onboarding/WalletSetup'
@@ -225,6 +225,55 @@ describe('WalletSetup - Copy Clarity', () => {
     expect(mockInvoke).toHaveBeenCalledWith('import_wallet', {
       privateKey: validKey,
       password: 'securePassword123',
+    })
+  })
+
+  it('should render success modal after wallet generation without crashing', async () => {
+    const user = userEvent.setup()
+    const onNext = vi.fn()
+    const onBack = vi.fn()
+    const mockInvoke = vi.mocked(invoke)
+    const queryClient = createTestQueryClient()
+
+    const mockGeneratedWallet = {
+      address: '0x0742d13378f69a4b0c9f5e3e66e14c8d9b7dbaf56f9e3e66e14c8d9b7dbaf56f',
+      public_key: '0x03e4c8f1234567890abcdef1234567890abcdef1234567890abcdef123456789',
+      private_key: '0x[REDACTED_IN_PRODUCTION]',
+      created_at: new Date().toISOString(),
+      encrypted: false,
+    }
+
+    mockInvoke.mockResolvedValueOnce(mockGeneratedWallet)
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <WalletSetup onNext={onNext} onBack={onBack} />
+      </QueryClientProvider>
+    )
+
+    // Component starts in generate mode by default, click the actual generate button
+    const generateButton = screen.getByRole('button', { name: 'Generate Wallet' })
+    await user.click(generateButton)
+
+    // Verify private key modal appears without crashing
+    await waitFor(() => {
+      expect(screen.getByText(/This is the ONLY time you will see your private key/i)).toBeInTheDocument()
+    })
+
+    // Verify critical security warning is displayed
+    expect(screen.getByText(/Anyone with this key can access your wallet/i)).toBeInTheDocument()
+
+    // Verify wallet address is set (check for the confirmation button)
+    const continueButton = screen.getByText('I Have Saved My Key - Continue')
+    expect(continueButton).toBeInTheDocument()
+    expect(continueButton).toBeDisabled() // Should be disabled until user confirms
+
+    // Verify onNext is NOT called before user confirms
+    expect(onNext).not.toHaveBeenCalled()
+
+    // Verify invoke was called correctly
+    expect(mockInvoke).toHaveBeenCalledWith('generate_wallet', {
+      password: undefined,
     })
   })
 })
