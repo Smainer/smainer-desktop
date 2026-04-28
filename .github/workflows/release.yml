@@ -53,19 +53,19 @@ jobs:
 
           # Verify spec file and entry point exist
           $specFile = "_backend\provider\smainer-provider.spec"
-          $mainPy = "_backend\provider\src\provider\main.py"
+          $entryPoint = "_backend\provider\run_provider.py"
           
           if (-not (Test-Path $specFile)) {
             Write-Error "Spec file not found at $specFile"
             Get-ChildItem _backend\provider -Recurse -Name | Select-Object -First 40
             exit 1
           }
-          if (-not (Test-Path $mainPy)) {
-            Write-Error "Provider main.py not found at $mainPy"
+          if (-not (Test-Path $entryPoint)) {
+            Write-Error "Provider entry point not found at $entryPoint"
             exit 1
           }
           Write-Host "Found spec: $specFile"
-          Write-Host "Found entry point: $mainPy"
+          Write-Host "Found entry point: $entryPoint"
 
           # Install provider dependencies from pyproject.toml
           cd _backend\provider
