@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  BACKEND_PROVIDER_REF: main
 
 jobs:
   build-windows:
@@ -45,9 +46,15 @@ jobs:
           MONOREPO_TOKEN: ${{ secrets.MONOREPO_TOKEN }}
         run: |
           # Clone entire provider package including spec file
-          git clone --depth 1 --no-checkout --single-branch `
+          git clone --depth 1 --no-checkout --single-branch --branch "$env:BACKEND_PROVIDER_REF" `
             "https://x-access-token:$env:MONOREPO_TOKEN@github.com/Smainer/smainer-backend.git" `
             _backend
+
+          # Record exact backend source SHA for build provenance
+          $backendSha = (git -C _backend rev-parse HEAD).Trim()
+          Write-Host "Backend provider source ref: $env:BACKEND_PROVIDER_REF"
+          Write-Host "Backend provider source SHA: $backendSha"
+          "BACKEND_PROVIDER_SHA=$backendSha" | Out-File -FilePath $env:GITHUB_ENV -Append
 
           # Enable sparse checkout — pull provider/ with spec file
           git -C _backend sparse-checkout init --cone
@@ -67,6 +74,37 @@ jobs:
             Write-Error "Provider entry point not found at $entryPoint"
             exit 1
           }
+
+          if (-not (Test-Path "_backend\provider")) {
+            Write-Error "Expected provider path missing at _backend\\provider"
+            exit 1
+          }
+
+          # Guardrail: fail release if secure hook/runtime wiring is missing
+          $specContent = Get-Content $specFile -Raw
+          if ($specContent -notmatch "hookspath\s*=\s*\[\s*'hooks'\s*\]") {
+            Write-Error "Secure hook path not enabled in smainer-provider.spec"
+            exit 1
+          }
+          if ($specContent -notmatch "runtime_hooks\s*=\s*\[\s*'runtime_hooks/runtime_crypto_fix_secure\.py'\s*\]") {
+            Write-Error "Secure runtime hook not enabled in smainer-provider.spec"
+            exit 1
+          }
+          if ($specContent -match "runtime_crypto_fix\.py") {
+            Write-Error "Legacy insecure runtime hook reference detected in smainer-provider.spec"
+            exit 1
+          }
+
+          $entryContent = Get-Content $entryPoint -Raw
+          if ($entryContent -notmatch "from provider\.main import main") {
+            Write-Error "run_provider.py is missing provider.main bootstrap import"
+            exit 1
+          }
+          if ($entryContent -match "from main import main") {
+            Write-Error "Legacy relative bootstrap import detected in run_provider.py"
+            exit 1
+          }
+
           Write-Host "Found spec: $specFile"
           Write-Host "Found entry point: $entryPoint"
 
