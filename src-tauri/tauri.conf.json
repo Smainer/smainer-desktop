@@ -54,9 +54,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/smainer-provider-x86_64-pc-windows-msvc",
-      "binaries/smainer-provider-x86_64-unknown-linux-gnu",
-      "binaries/smainer-provider-aarch64-apple-darwin"
+      "binaries/smainer-provider"
     ],
     "windows": {
       "certificateThumbprint": null,

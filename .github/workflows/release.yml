@@ -115,12 +115,12 @@ jobs:
           # Build using spec file (all hidden imports and config defined there)
           pyinstaller smainer-provider.spec --distpath dist
 
-          # Place in Tauri sidecar location with target triple
+          # Place in Tauri sidecar location (Tauri will append target triple automatically)
           New-Item -ItemType Directory -Force -Path ..\..\src-tauri\binaries
           Copy-Item dist\smainer-provider.exe `
-            ..\..\src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe
+            ..\..\src-tauri\binaries\smainer-provider.exe
 
-          $size = (Get-Item ..\..\src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe).Length
+          $size = (Get-Item ..\..\src-tauri\binaries\smainer-provider.exe).Length
           Write-Host "Sidecar built: $size bytes"
 
       - name: Install frontend deps
