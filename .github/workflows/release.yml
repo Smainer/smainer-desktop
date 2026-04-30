@@ -115,12 +115,14 @@ jobs:
           # Build using spec file (all hidden imports and config defined there)
           pyinstaller smainer-provider.spec --distpath dist
 
-          # Place in Tauri sidecar location (Tauri will append target triple automatically)
+          # Place in Tauri sidecar location with required target-triple suffix
+          # tauri.conf.json declares externalBin as "binaries/smainer-provider";
+          # Tauri resolves the actual file by appending the target triple at build time.
           New-Item -ItemType Directory -Force -Path ..\..\src-tauri\binaries
           Copy-Item dist\smainer-provider.exe `
-            ..\..\src-tauri\binaries\smainer-provider.exe
+            ..\..\src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe
 
-          $size = (Get-Item ..\..\src-tauri\binaries\smainer-provider.exe).Length
+          $size = (Get-Item ..\..\src-tauri\binaries\smainer-provider-x86_64-pc-windows-msvc.exe).Length
           Write-Host "Sidecar built: $size bytes"
 
       - name: Install frontend deps
@@ -282,6 +284,17 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Create stub sidecar for CI (no provider built in this job)
+        shell: pwsh
+        run: |
+          # Tauri requires the target-suffixed sidecar file to exist at bundle time.
+          # This job only tests that the MSI build pipeline works; the stub is
+          # never shipped — it is replaced by the real binary in build-windows.
+          New-Item -ItemType Directory -Force -Path src-tauri/binaries
+          Set-Content -Path "src-tauri/binaries/smainer-provider-x86_64-pc-windows-msvc.exe" `
+            -Value "STUB" -Encoding Ascii
+          Write-Host "Stub sidecar created for local-dev CI test"
 
       - name: Test local build without sidecar
         run: npm run tauri build -- --bundles msi
