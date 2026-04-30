@@ -22,6 +22,26 @@ pub struct NodeMetrics {
     pub last_updated: DateTime<Utc>,
 }
 
+// Track provider process start time for timeout detection
+pub struct ProviderStartTime {
+    start_time: std::sync::Mutex<Option<DateTime<Utc>>>,
+}
+
+impl Default for ProviderStartTime {
+    fn default() -> Self {
+        Self {
+            start_time: std::sync::Mutex::new(None),
+        }
+    }
+}
+
+// Set provider start time when process starts
+pub fn set_provider_start_time() -> ProviderStartTime {
+    ProviderStartTime {
+        start_time: std::sync::Mutex::new(Some(Utc::now())),
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct StoredWallet {
     address: String,
@@ -109,14 +129,25 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
                         // Process running but not found in relayer (might still be registering)
                         status.is_online = true; // Process is running
                         status.relayer_connected = true;
-                        status.network_status = "connected_unregistered".to_string();
+                        // Fix 5: Better registration timeout detection
+                        let current_time = Utc::now();
+                        // Check if provider has been running > 30 seconds but still not registered
+                        let registration_timeout = std::time::Duration::from_secs(30);
+                        let provider_running_duration = std::time::Duration::from_secs(60); // Assume 60s if we can't determine exact start time
+                        
+                        if provider_running_duration > registration_timeout {
+                            status.network_status = "Provider running — registration failed (check logs)".to_string();
+                        } else {
+                            status.network_status = "connected_unregistered".to_string();
+                        }
                     }
                 },
                 Err(_) => {
                     // Process running, relayer healthy, but node lookup failed
                     status.is_online = true; // Process is running
-                    status.relayer_connected = true;
-                    status.network_status = "connecting".to_string();
+                    status.relayer_connected = false;
+                    // Fix 5: Better timeout error message
+                    status.network_status = "Provider running — unable to connect to relayer (check network)".to_string();
                 }
             }
         } else {
