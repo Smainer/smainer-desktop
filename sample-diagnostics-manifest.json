@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-04-30T15:30:00Z",
+  "node_id": "071cd50ddd9a2d0e1e95e6de",
+  "wallet_address": "0x071cd50ddd9a2d0e1e95e6decd9f0a292b489dc6b9b13e68aac43b2295b626d6",
+  "relayer_url": "https://api.smainer.io",
+  "provider_process_running": false,
+  "provider_pid": null,
+  "dns_probe": {
+    "success": true,
+    "result": "Resolved to: ['172.67.74.226:443', '104.21.2.178:443']",
+    "error_type": null,
+    "duration_ms": 89
+  },
+  "health_probe": {
+    "success": true,
+    "result": "HTTP 200 - {\"status\":\"healthy\",\"version\":\"1.0.0\",\"timestamp\":\"2026-04-30T15:30:01Z\"}",
+    "error_type": null,
+    "duration_ms": 156
+  },
+  "websocket_probe": {
+    "success": false,
+    "result": "WebSocket URL: wss://api.smainer.io/ws/node/071cd50ddd9a2d0e1e95e6de (auth test skipped for security)",
+    "error_type": "auth_required",
+    "duration_ms": 8
+  },
+  "files_included": [
+    "provider.log",
+    "provider-startup.log",
+    "wallet-redacted.json",
+    "diagnostics-manifest.json"
+  ]
+}

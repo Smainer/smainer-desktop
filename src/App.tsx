@@ -18,6 +18,7 @@ import TaskHistory from './components/dashboard/TaskHistory.tsx';
 // Settings Components
 import HardwareConfig from './components/settings/HardwareConfig.tsx';
 import ServiceOptions from './components/settings/ServiceOptions.tsx';
+import DiagnosticsExport from './components/settings/DiagnosticsExport.tsx';
 
 // Hooks
 import { useNodeStatus } from './hooks/useNodeStatus.ts';
@@ -272,6 +273,9 @@ function AppContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <HardwareConfig />
               <ServiceOptions onReset={resetOnboarding} />
+            </div>
+            <div className="max-w-2xl">
+              <DiagnosticsExport />
             </div>
           </TabsContent>
         </Tabs>
