@@ -25,6 +25,21 @@ export default function NodeRegistration({
 
   const registerNode = useRegisterNode()
 
+  const persistProviderConfig = (nodeId: string) => {
+    const providerConfig = {
+      wallet_address: walletAddress,
+      relayer_url: relayerUrl.trim(),
+      port: 8080,
+      max_tasks: 1,
+      gpu_enabled: true,
+      auto_start: autoStart,
+      node_id: nodeId,
+      updated_at: new Date().toISOString(),
+    }
+
+    localStorage.setItem('smainer_provider_config', JSON.stringify(providerConfig))
+  }
+
   const handleRegister = () => {
     if (!hardwareInfo) {
       toast.error('Hardware detection incomplete. Please restart the application.')
@@ -48,6 +63,7 @@ export default function NodeRegistration({
 
     registerNode.mutate(registration, {
       onSuccess: (nodeId) => {
+        persistProviderConfig(nodeId)
         toast.success('Node registered successfully! Provider daemon started.')
         onComplete(walletAddress, nodeId)
       },
