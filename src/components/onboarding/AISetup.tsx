@@ -146,7 +146,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
       ...prev,
       ai_serving_enabled: enabled,
       ollama_config: enabled ? {
-        install_requested: !ollamaAvailable,
+        install_requested: ollamaAvailable === false,
         api_endpoint: 'http://localhost:11434',
         models_to_install: ['llama3.1:8b'],
         auto_update: false
@@ -202,8 +202,8 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
     try {
       await invoke('save_ai_config', { config })
       
-      // BUG FIX: Trigger Ollama installation if requested and not available
-      if (config.ollama_config?.install_requested && !ollamaAvailable) {
+      // Guard: only install when availability is confirmed false (not null/loading or true)
+      if (config.ollama_config?.install_requested && ollamaAvailable === false) {
         try {
           await invoke('install_ollama')
           toast.success('Ollama installation initiated successfully')

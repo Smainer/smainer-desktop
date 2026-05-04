@@ -288,4 +288,119 @@ describe('AISetup - Continue Button Behavior', () => {
     // Clean up - resolve the promise
     resolveSave(undefined)
   })
+
+  it('should not fire install_ollama when ollamaAvailable is null (availability still loading)', async () => {
+    const user = userEvent.setup()
+    const onNext = vi.fn()
+    const onBack = vi.fn()
+    const mockInvoke = vi.mocked(invoke)
+
+    // fetch never resolves — ollamaAvailable stays null
+    vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'load_ai_config') {
+        return Promise.resolve({
+          schema_version: '1.0.0',
+          contract_version: '2024.1',
+          ai_serving_enabled: false,
+          model_preferences: [],
+          privacy_mode: 'Standard',
+          resources: { max_cpu_percent: 80, max_ram_gb: 8 },
+        })
+      }
+      if (cmd === 'validate_ai_capabilities') {
+        return Promise.resolve({
+          system_validation: { errors: [], warnings: [] },
+          compatibility_status: 'Compatible',
+        })
+      }
+      if (cmd === 'save_ai_config') return Promise.resolve(undefined)
+      return Promise.reject(new Error('Unknown command'))
+    })
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AISetup onNext={onNext} onBack={onBack} />
+      </QueryClientProvider>
+    )
+
+    // Enable AI serving (ollamaAvailable is still null here)
+    const enableCheckbox = await screen.findByLabelText(/Enable AI inference serving/)
+    await user.click(enableCheckbox)
+
+    const continueButton = screen.getByText('Continue to Wallet Setup')
+    await user.click(continueButton)
+
+    await waitFor(() => {
+      expect(onNext).toHaveBeenCalled()
+    })
+
+    // install_ollama must NOT have been called — availability was null, not false
+    expect(mockInvoke).not.toHaveBeenCalledWith('install_ollama', expect.anything())
+    expect(mockInvoke).not.toHaveBeenCalledWith('install_ollama')
+  })
+
+  it('should not fire install_ollama when ollamaAvailable resolves true even if saved config has install_requested=true', async () => {
+    const user = userEvent.setup()
+    const onNext = vi.fn()
+    const onBack = vi.fn()
+    const mockInvoke = vi.mocked(invoke)
+
+    // Ollama is present
+    vi.mocked(fetch).mockResolvedValue({ ok: true } as Response)
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'load_ai_config') {
+        // Saved config from a previous session where Ollama was absent
+        return Promise.resolve({
+          schema_version: '1.0.0',
+          contract_version: '2024.1',
+          ai_serving_enabled: true,
+          ollama_config: {
+            install_requested: true, // stale true from prior session
+            api_endpoint: 'http://localhost:11434',
+            models_to_install: ['llama3.1:8b'],
+            auto_update: false,
+          },
+          model_preferences: [],
+          privacy_mode: 'Standard',
+          resources: { max_cpu_percent: 80, max_ram_gb: 8 },
+        })
+      }
+      if (cmd === 'validate_ai_capabilities') {
+        return Promise.resolve({
+          system_validation: { errors: [], warnings: [] },
+          compatibility_status: 'Compatible',
+        })
+      }
+      if (cmd === 'save_ai_config') return Promise.resolve(undefined)
+      return Promise.reject(new Error('Unknown command'))
+    })
+
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AISetup onNext={onNext} onBack={onBack} />
+      </QueryClientProvider>
+    )
+
+    const continueButton = await screen.findByText('Continue to Wallet Setup')
+
+    // Wait for Ollama availability to resolve (fetch resolved ok=true)
+    await waitFor(() => {
+      expect(screen.getByText(/Ollama runtime detected/i)).toBeInTheDocument()
+    })
+
+    await user.click(continueButton)
+
+    await waitFor(() => {
+      expect(onNext).toHaveBeenCalled()
+    })
+
+    // install_ollama must NOT have been called — Ollama is already available
+    expect(mockInvoke).not.toHaveBeenCalledWith('install_ollama', expect.anything())
+    expect(mockInvoke).not.toHaveBeenCalledWith('install_ollama')
+  })
 })

@@ -243,6 +243,49 @@ describe('NodeStatus component — relayer status display', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
   })
+
+  it('shows "Starting" in Relayer cell when process is connecting (not yet registered)', () => {
+    render(
+      <TestQueryClientProvider>
+        <NodeStatus status={makeStatus({
+          is_online: false,
+          relayer_connected: false,
+          network_status: 'connecting',
+        })} />
+      </TestQueryClientProvider>
+    )
+    expect(screen.getByText('Starting')).toBeInTheDocument()
+    expect(screen.queryByText('Offline')).not.toBeInTheDocument()
+  })
+
+  it('shows connecting description when network_status is connecting', () => {
+    render(
+      <TestQueryClientProvider>
+        <NodeStatus status={makeStatus({
+          is_online: false,
+          relayer_connected: false,
+          network_status: 'connecting',
+        })} />
+      </TestQueryClientProvider>
+    )
+    expect(screen.getByText(/connecting to relayer/i)).toBeInTheDocument()
+    expect(screen.queryByText(/node is offline/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/unable to connect/i)).not.toBeInTheDocument()
+  })
+
+  it('still shows "Offline" in Relayer cell when network_status is disconnected', () => {
+    render(
+      <TestQueryClientProvider>
+        <NodeStatus status={makeStatus({
+          is_online: false,
+          relayer_connected: false,
+          network_status: 'disconnected',
+        })} />
+      </TestQueryClientProvider>
+    )
+    expect(screen.getByText('Offline')).toBeInTheDocument()
+    expect(screen.queryByText('Starting')).not.toBeInTheDocument()
+  })
 })
 
 // ── 4. useStartProvider mutation ─────────────────────────────────────────────

@@ -56,11 +56,11 @@ export default function NodeStatus({ status }: NodeStatusProps) {
               <CardTitle className="flex items-center space-x-2">
                 <span>Node Status</span>
                 <div className={`w-3 h-3 rounded-full ${
-                  status?.is_online ? 'bg-primary' : 'bg-destructive'
+                  status?.is_online ? 'bg-primary' : status?.network_status === 'connecting' ? 'bg-yellow-500' : 'bg-destructive'
                 }`} />
               </CardTitle>
               <CardDescription>
-                {startProvider.isPending ? 'Connecting to network...' : stopProvider.isPending ? 'Shutting down...' : status?.is_online ? 'Your node is running and accepting tasks' : status?.relayer_connected === false && status?.network_status === 'disconnected' ? 'Node offline - unable to connect to relayer' : 'Node is offline'}
+                {startProvider.isPending ? 'Connecting to network...' : stopProvider.isPending ? 'Shutting down...' : status?.is_online ? 'Your node is running and accepting tasks' : status?.network_status === 'connecting' ? 'Starting up — connecting to relayer...' : status?.relayer_connected === false && status?.network_status === 'disconnected' ? 'Node offline - unable to connect to relayer' : 'Node is offline'}
               </CardDescription>
             </div>
             <Button
@@ -88,7 +88,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
             </div>
             <div className="text-center p-3 bg-card rounded-lg">
               <div className="text-2xl font-bold text-primary">
-                {status?.relayer_connected ? 'Online' : 'Offline'}
+                {status?.relayer_connected ? 'Online' : status?.network_status === 'connecting' ? 'Starting' : 'Offline'}
               </div>
               <div className="text-xs text-muted-foreground">Relayer</div>
             </div>
