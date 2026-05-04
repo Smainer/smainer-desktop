@@ -46,50 +46,94 @@ function AppContent() {
   const { data: nodeStatus } = useNodeStatus();
   const { data: hardwareInfo } = useHardwareInfo();
 
-  // Check if onboarding is complete on app start - run only once on mount
+  // Check onboarding state and auto-start provider on app launch when configured.
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
-        
-        // Check if wallet exists first
+
         const walletAddress = await invoke<string>('get_wallet_address').catch(() => null);
-        
-        if (walletAddress) {
-          // Wallet exists - check provider daemon status for registration indication
-          const providerStatus = await invoke<any>('get_provider_status').catch(() => ({ 
-            is_running: false, 
-            relayer_connected: false 
-          }));
-          
-          if (providerStatus.is_running && providerStatus.relayer_connected) {
-            // Provider running AND connected to relayer indicates successful registration
-            setAppState(prev => ({
-              ...prev,
-              onboardingComplete: true,
-              walletAddress,
-              nodeId: nodeStatus?.node_id || null,
-            }));
-          } else {
-            // Wallet exists but provider not properly running/connected 
-            // Resume from Node Registration step with clear guidance
-            setAppState(prev => ({
-              ...prev,
-              currentStep: 3, // Skip to registration step
-              walletAddress,
-            }));
-          }
-        } else {
-          // No wallet - start from beginning at System Check
+        if (!walletAddress) {
           setAppState(prev => ({
             ...prev,
             currentStep: 0,
             onboardingComplete: false,
           }));
+          return;
         }
+
+        const defaultRelayerUrl = (import.meta as any).env?.VITE_RELAYER_URL || 'https://api.smainer.io';
+        const providerConfigRaw = localStorage.getItem('smainer_provider_config');
+        let providerConfig: any = null;
+
+        if (providerConfigRaw) {
+          try {
+            providerConfig = JSON.parse(providerConfigRaw);
+          } catch {
+            localStorage.removeItem('smainer_provider_config');
+          }
+        }
+
+        let providerStatus = await invoke<any>('get_provider_status').catch(() => ({
+          is_running: false,
+          relayer_connected: false,
+        }));
+
+        // Auto-start if wallet exists but provider not running
+        const effectiveAutoStart = providerConfig?.auto_start ?? true;
+        const effectiveWallet = providerConfig?.wallet_address || walletAddress;
+
+        const shouldAutoStart =
+          !!effectiveAutoStart &&
+          !!effectiveWallet &&
+          !providerStatus?.is_running;
+
+        if (shouldAutoStart) {
+          const startConfig = {
+            wallet_address: effectiveWallet,
+            relayer_url: providerConfig?.relayer_url || defaultRelayerUrl,
+            port: providerConfig?.port || 8080,
+            max_tasks: providerConfig?.max_tasks || 1,
+            gpu_enabled: providerConfig?.gpu_enabled ?? true,
+            auto_start: true,
+          };
+
+          await invoke<boolean>('start_provider', { config: startConfig }).catch((error) => {
+            console.warn('Auto-start provider failed:', error);
+          });
+
+          if (!providerConfigRaw) {
+            localStorage.setItem('smainer_provider_config', JSON.stringify({
+              ...startConfig,
+              node_id: nodeStatus?.node_id || null,
+              updated_at: new Date().toISOString(),
+            }));
+          }
+
+          providerStatus = await invoke<any>('get_provider_status').catch(() => ({
+            is_running: false,
+            relayer_connected: false,
+          }));
+        }
+
+        if (providerStatus.is_running) {
+          setAppState(prev => ({
+            ...prev,
+            onboardingComplete: true,
+            walletAddress,
+            nodeId: nodeStatus?.node_id || providerConfig?.node_id || null,
+          }));
+          return;
+        }
+
+        setAppState(prev => ({
+          ...prev,
+          currentStep: 3,
+          onboardingComplete: false,
+          walletAddress,
+        }));
       } catch (error) {
         console.warn('Failed to check onboarding status:', error);
-        // On error, start from System Check for safety
         setAppState(prev => ({
           ...prev,
           currentStep: 0,
@@ -100,7 +144,7 @@ function AppContent() {
 
     checkOnboardingStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount, not on every nodeStatus change
+  }, []);
 
   const handleOnboardingComplete = (walletAddress: string, nodeId: string) => {
     setAppState({

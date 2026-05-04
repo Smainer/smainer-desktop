@@ -97,3 +97,7 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+# Provider sidecar binaries (built by CI/PyInstaller, not committed to git)
+src-tauri/binaries/smainer-provider
+src-tauri/binaries/smainer-provider-*
+src-tauri/binaries/*.linux-backup
