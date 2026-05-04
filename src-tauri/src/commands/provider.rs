@@ -144,7 +144,7 @@ pub async fn start_provider(
     
     // Pass required env vars to sidecar
     // RELAYER_WS_URL: pass base URL only - provider config.py builds the full WS path
-    cmd.env("RELAYER_WS_URL", &config.relayer_url);
+    cmd.env("RELAYER_WS_URL", http_to_ws_url(&config.relayer_url));
     cmd.env("STARKNET_ACCOUNT_ADDRESS", &config.wallet_address);
     // NODE_ID: derive from wallet address for stable identity
     let node_id = node_id_from_address(&config.wallet_address);
@@ -186,7 +186,7 @@ pub async fn start_provider(
     {
         let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
         let _ = writeln!(startup_log, "[{}] Provider startup:", timestamp);
-        let _ = writeln!(startup_log, "  RELAYER_WS_URL: {}", &config.relayer_url);
+        let _ = writeln!(startup_log, "  RELAYER_WS_URL: {}", http_to_ws_url(&config.relayer_url));
         let _ = writeln!(startup_log, "  NODE_ID: {}", &node_id);
         let _ = writeln!(startup_log, "  STARKNET_ACCOUNT_ADDRESS: {}", &config.wallet_address);
         let _ = writeln!(startup_log, "  STARKNET_PRIVATE_KEY: {}", private_key_for_logging);
