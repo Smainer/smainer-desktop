@@ -48,6 +48,12 @@ Thumbs.db
 
 # Build output
 /dist/
+/package-linux/
+*.tar.gz
+*.zip
+
+# Icon backups (generated assets)
+icons_backup_*/
 
 # Environment variables
 .env

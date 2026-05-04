@@ -1,17 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import WalletSetup from '../components/onboarding/WalletSetup'
 import { invoke } from '@tauri-apps/api/core'
-
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
+import { createTestQueryClient } from './test-utils'
 
 describe('WalletSetup - Copy Clarity', () => {
   beforeEach(() => {

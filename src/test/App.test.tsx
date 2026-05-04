@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import App from '../App'
 import { invoke } from '@tauri-apps/api/core'
+import { createTestQueryClient } from './test-utils'
 
 // Mock child components
 vi.mock('../components/onboarding/SystemCheck', () => ({

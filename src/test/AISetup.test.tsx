@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import AISetup from '../components/onboarding/AISetup'
 import { invoke } from '@tauri-apps/api/core'
+import { createTestQueryClient } from './test-utils'
 
 // Mock fetch for Ollama check
 globalThis.fetch = vi.fn() as any
@@ -22,14 +23,6 @@ vi.mock('../hooks/useHardwareInfo', () => ({
     },
   }),
 }))
-
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
 
 describe('AISetup - Continue Button Behavior', () => {
   beforeEach(() => {
