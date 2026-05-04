@@ -63,16 +63,18 @@ fn node_id_from_address(addr: &str) -> String {
     if id.is_empty() { "default-node".to_string() } else { id }
 }
 
-/// Get the provider daemon log file path
+/// Get the provider daemon log file path.
+/// On Windows uses APPDATA\smainer\provider.log (no dot) — matches the working_dir
+/// created in start_provider. On Linux/macOS uses ~/.smainer/provider.log.
 fn get_provider_log_path() -> std::path::PathBuf {
-    let base = if cfg!(target_os = "windows") {
-        std::env::var("APPDATA")
+    if cfg!(target_os = "windows") {
+        let base = std::env::var("APPDATA")
             .map(std::path::PathBuf::from)
-            .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default())
+            .unwrap_or_else(|_| dirs::home_dir().unwrap_or_default());
+        base.join("smainer").join("provider.log")
     } else {
-        dirs::home_dir().unwrap_or_default()
-    };
-    base.join(".smainer").join("provider.log")
+        dirs::home_dir().unwrap_or_default().join(".smainer").join("provider.log")
+    }
 }
 
 #[command]
@@ -203,6 +205,10 @@ pub async fn start_provider(
                 let log_path = get_provider_log_path();
                 std::thread::spawn(move || {
                     use std::io::BufRead;
+                    // Ensure parent directory exists before opening log
+                    if let Some(parent) = log_path.parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
                     let reader = std::io::BufReader::new(stdout);
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .create(true)
@@ -221,6 +227,10 @@ pub async fn start_provider(
                 let log_path = get_provider_log_path();
                 std::thread::spawn(move || {
                     use std::io::BufRead;
+                    // Ensure parent directory exists before opening log
+                    if let Some(parent) = log_path.parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
                     let reader = std::io::BufReader::new(stderr);
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .create(true)
