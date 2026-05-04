@@ -75,11 +75,18 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
     let wallet_addr = get_wallet_address_local().unwrap_or_default();
     let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
 
+    // Compute uptime from process start time (tracked locally, no relayer needed)
+    let uptime_secs: u64 = {
+        if let Ok(guard) = state.start_time.lock() {
+            guard.as_ref().map(|t| t.elapsed().as_secs()).unwrap_or(0)
+        } else { 0 }
+    };
+
     // Default offline status
     let mut status = NodeStatus {
         is_online: false, // Only set true when relayer confirms
         node_id: wallet_addr.clone(),
-        uptime: 0,
+        uptime: uptime_secs,
         last_heartbeat: Utc::now(),
         tasks_active: 0,
         tasks_completed_today: 0,

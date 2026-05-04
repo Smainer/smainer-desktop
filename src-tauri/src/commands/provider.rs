@@ -12,6 +12,7 @@ use crate::models::{ProviderStatus, NodeRegistration, AICapabilityConfig, AICapa
 pub struct ProviderState {
     pub process: Mutex<Option<Child>>,
     pub relayer_url: Mutex<String>,
+    pub start_time: Mutex<Option<std::time::Instant>>,
 }
 
 impl Default for ProviderState {
@@ -19,6 +20,7 @@ impl Default for ProviderState {
         Self {
             process: Mutex::new(None),
             relayer_url: Mutex::new("https://api.smainer.io".to_string()),
+            start_time: Mutex::new(None),
         }
     }
 }
@@ -233,6 +235,7 @@ pub async fn start_provider(
             }
             
             *process_guard = Some(child);
+            if let Ok(mut st) = state.start_time.lock() { *st = Some(std::time::Instant::now()); }
             tracing::info!("Provider started successfully");
             Ok(true)
         }
@@ -251,6 +254,7 @@ pub async fn stop_provider(state: State<'_, ProviderState>) -> Result<bool, Stri
     if let Some(mut child) = process_guard.take() {
         child.kill().map_err(|e| e.to_string())?;
         child.wait().ok(); // Avoid zombie process
+        if let Ok(mut st) = state.start_time.lock() { *st = None; }
         tracing::info!("Provider stopped");
     }
     
