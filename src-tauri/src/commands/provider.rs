@@ -146,25 +146,41 @@ pub async fn start_provider(
         return Err("Provider daemon not found. Use the installer build or set SMAINER_PROVIDER_CMD environment variable.".to_string());
     };
     
-    // Pass required env vars to sidecar
-    // RELAYER_WS_URL: pass base URL only - provider config.py builds the full WS path
-    cmd.env("RELAYER_WS_URL", http_to_ws_url(&config.relayer_url));
-    cmd.env("STARKNET_ACCOUNT_ADDRESS", &config.wallet_address);
+    // Fail-fast guard: private key must be present before sidecar is spawned
+    let private_key = read_wallet_private_key()
+        .ok_or_else(|| "Wallet private key not found. Complete wallet setup again.".to_string())?;
+
     // NODE_ID: derive from wallet address for stable identity
     let node_id = node_id_from_address(&config.wallet_address);
-    cmd.env("NODE_ID", &node_id);
-    // STARKNET_PRIVATE_KEY: required for WS auth signature — read from local wallet file
-    let private_key_for_logging = if let Some(pk) = read_wallet_private_key() {
-        cmd.env("STARKNET_PRIVATE_KEY", &pk);
-        // Redact for logging: show first 6 chars only
-        if pk.len() > 6 {
-            format!("{}...", &pk[..6])
-        } else {
-            "<short_key>...".to_string()
+
+    // Isolate sidecar environment — only forward vars the Python runtime needs
+    cmd.env_clear();
+    // Preserve OS-level runtime vars required for the Python sidecar to resolve paths and run
+    #[cfg(target_os = "windows")]
+    {
+        for var in &["PATH", "SYSTEMROOT", "SYSTEMDRIVE", "TEMP", "TMP",
+                     "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA", "LOCALAPPDATA"] {
+            if let Ok(val) = std::env::var(var) {
+                cmd.env(var, &val);
+            }
         }
-    } else {
-        "<not_found>".to_string()
-    };
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        for var in &["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL"] {
+            if let Ok(val) = std::env::var(var) {
+                cmd.env(var, &val);
+            }
+        }
+    }
+
+    // Pass required env vars to sidecar
+    // RELAYER_WS_URL: pass base URL only — provider config.py builds the full WS path
+    cmd.env("RELAYER_WS_URL", http_to_ws_url(&config.relayer_url));
+    cmd.env("STARKNET_ACCOUNT_ADDRESS", &config.wallet_address);
+    cmd.env("NODE_ID", &node_id);
+    // STARKNET_PRIVATE_KEY: set only after guard confirms presence — never logged
+    cmd.env("STARKNET_PRIVATE_KEY", &private_key);
     
     // Fix 2: Set writable working directory for daemon
     let working_dir = if cfg!(target_os = "windows") {
@@ -193,7 +209,7 @@ pub async fn start_provider(
         let _ = writeln!(startup_log, "  RELAYER_WS_URL: {}", http_to_ws_url(&config.relayer_url));
         let _ = writeln!(startup_log, "  NODE_ID: {}", &node_id);
         let _ = writeln!(startup_log, "  STARKNET_ACCOUNT_ADDRESS: {}", &config.wallet_address);
-        let _ = writeln!(startup_log, "  STARKNET_PRIVATE_KEY: {}", private_key_for_logging);
+        let _ = writeln!(startup_log, "  STARKNET_PRIVATE_KEY: <set>");
         let _ = writeln!(startup_log, "  Working directory: {}", working_dir.display());
     }
 
