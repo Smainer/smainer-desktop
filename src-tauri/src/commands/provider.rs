@@ -581,7 +581,7 @@ fn validate_model_requirements(
     }
 }
 
-/// BUG FIX: Install Ollama on Windows
+/// Install Ollama — Windows, Linux, and macOS branches.
 #[command]
 pub async fn install_ollama() -> Result<String, String> {
     #[cfg(target_os = "windows")]
@@ -632,10 +632,95 @@ pub async fn install_ollama() -> Result<String, String> {
         tracing::info!("Ollama installation completed successfully");
         Ok("Ollama installed successfully".to_string())
     }
-    
-    #[cfg(not(target_os = "windows"))]
+
+    #[cfg(target_os = "linux")]
     {
-        Err("Automatic Ollama installation is only supported on Windows. Please install Ollama manually from https://ollama.com/download".to_string())
+        tracing::info!("Starting Ollama installation for Linux...");
+
+        // Require curl — give a clear error if it's missing.
+        let curl_check = std::process::Command::new("sh")
+            .args(["-c", "command -v curl"])
+            .output()
+            .map_err(|e| format!("Failed to check for curl: {}", e))?;
+
+        if !curl_check.status.success() {
+            return Err(
+                "curl is required to install Ollama but was not found. \
+                Install it with: sudo apt install curl  (or equivalent for your distro), \
+                then re-run this installer. \
+                Alternatively install Ollama manually: https://ollama.com/download"
+                    .to_string(),
+            );
+        }
+
+        // Run the official Ollama install script.
+        // This requires network access and may prompt for sudo internally.
+        tracing::info!("Running: curl -fsSL https://ollama.com/install.sh | sh");
+        let output = std::process::Command::new("sh")
+            .args(["-c", "curl -fsSL https://ollama.com/install.sh | sh"])
+            .output()
+            .map_err(|e| {
+                format!(
+                    "Failed to run Ollama install script: {}. \
+                    Manual fallback: curl -fsSL https://ollama.com/install.sh | sh",
+                    e
+                )
+            })?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Err(format!(
+                "Ollama install script failed (exit {}).\n\
+                stdout: {}\nstderr: {}\n\
+                Manual fallback: curl -fsSL https://ollama.com/install.sh | sh",
+                output.status.code().unwrap_or(-1),
+                stdout.trim(),
+                stderr.trim()
+            ));
+        }
+
+        // Attempt to enable and start the ollama systemd service.
+        // This is nonfatal — some Linux environments (containers, non-systemd) won't have it.
+        let systemctl_result = std::process::Command::new("systemctl")
+            .args(["enable", "--now", "ollama"])
+            .output();
+
+        match systemctl_result {
+            Ok(sc_out) if sc_out.status.success() => {
+                tracing::info!("Ollama systemd service enabled and started successfully");
+            }
+            Ok(sc_out) => {
+                let sc_stderr = String::from_utf8_lossy(&sc_out.stderr);
+                tracing::warn!(
+                    "systemctl enable --now ollama returned non-zero (nonfatal): {}",
+                    sc_stderr.trim()
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "systemctl not available on this system (nonfatal): {}. \
+                    Start Ollama manually with: ollama serve",
+                    e
+                );
+            }
+        }
+
+        tracing::info!("Ollama installation completed successfully on Linux");
+        Ok(
+            "Ollama installed successfully. \
+            If Ollama did not start automatically, run: ollama serve"
+                .to_string(),
+        )
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        Err(
+            "Automatic Ollama installation is not supported on this platform. \
+            Please install Ollama manually from https://ollama.com/download"
+                .to_string(),
+        )
     }
 }
 
