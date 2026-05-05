@@ -83,11 +83,12 @@ pub async fn start_provider(
     state: State<'_, ProviderState>
 ) -> Result<bool, String> {
     tracing::info!("Starting provider with config: {:?}", config);
-    
-    let mut process_guard = state.process.lock().map_err(|e| e.to_string())?;
-    
-    if process_guard.is_some() {
-        return Ok(true); // Already running
+
+    {
+        let process_guard = state.process.lock().map_err(|e| e.to_string())?;
+        if process_guard.is_some() {
+            return Ok(true); // Already running
+        }
     }
 
     // Update relayer URL in state
@@ -181,6 +182,29 @@ pub async fn start_provider(
     cmd.env("NODE_ID", &node_id);
     // STARKNET_PRIVATE_KEY: set only after guard confirms presence — never logged
     cmd.env("STARKNET_PRIVATE_KEY", &private_key);
+
+    let ai_config = load_ai_config().await.unwrap_or_default();
+    if ai_config.ai_serving_enabled {
+        let ollama_endpoint = ai_config.ollama_config
+            .as_ref()
+            .map(|config| config.api_endpoint.clone())
+            .unwrap_or_else(|| "http://localhost:11434".to_string());
+        let ollama_available = ensure_ollama_available(&ollama_endpoint).await;
+        let models = enabled_ai_models(&ai_config).join(",");
+
+        cmd.env("OLLAMA_BASE_URL", &ollama_endpoint);
+        cmd.env("CAPABILITY_AI_ENABLED", "true");
+        cmd.env("CAPABILITY_OLLAMA_ENABLED", if ollama_available { "true" } else { "false" });
+        cmd.env("CAPABILITY_SUPPORTED_MODELS", &models);
+        cmd.env("CAPABILITY_PRIVACY_MODE", provider_privacy_mode(&ai_config));
+        cmd.env("CAPABILITY_CONTRACT_VERSION", "1.0.0");
+    } else {
+        cmd.env("CAPABILITY_AI_ENABLED", "false");
+        cmd.env("CAPABILITY_OLLAMA_ENABLED", "false");
+        cmd.env("CAPABILITY_SUPPORTED_MODELS", "");
+        cmd.env("CAPABILITY_PRIVACY_MODE", "full_isolation");
+        cmd.env("CAPABILITY_CONTRACT_VERSION", "1.0.0");
+    }
     
     // Fix 2: Set writable working directory for daemon
     let working_dir = if cfg!(target_os = "windows") {
@@ -211,6 +235,11 @@ pub async fn start_provider(
         let _ = writeln!(startup_log, "  STARKNET_ACCOUNT_ADDRESS: {}", &config.wallet_address);
         let _ = writeln!(startup_log, "  STARKNET_PRIVATE_KEY: <set>");
         let _ = writeln!(startup_log, "  Working directory: {}", working_dir.display());
+    }
+
+    let mut process_guard = state.process.lock().map_err(|e| e.to_string())?;
+    if process_guard.is_some() {
+        return Ok(true); // Already running
     }
 
     match cmd.spawn() {
@@ -550,12 +579,118 @@ pub async fn validate_ai_capabilities(config: AICapabilityConfig) -> Result<AICa
 
 async fn check_ollama_available(endpoint: &str) -> bool {
     let client = reqwest::Client::new();
-    let url = format!("{}/api/version", endpoint);
+    let url = format!("{}/api/version", endpoint.trim_end_matches('/'));
     
     match client.get(&url).send().await {
         Ok(response) => response.status().is_success(),
         Err(_) => false,
     }
+}
+
+fn resolve_ollama_executable() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        if std::process::Command::new("where")
+            .arg("ollama")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+        {
+            return Some(PathBuf::from("ollama"));
+        }
+
+        let mut candidates: Vec<PathBuf> = Vec::new();
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let base = PathBuf::from(local_app_data);
+            candidates.push(base.join("Programs").join("Ollama").join("ollama.exe"));
+            candidates.push(base.join("Ollama").join("ollama.exe"));
+        }
+        if let Ok(program_files) = std::env::var("PROGRAMFILES") {
+            candidates.push(PathBuf::from(program_files).join("Ollama").join("ollama.exe"));
+        }
+        if let Ok(program_files_x86) = std::env::var("PROGRAMFILES(X86)") {
+            candidates.push(PathBuf::from(program_files_x86).join("Ollama").join("ollama.exe"));
+        }
+
+        candidates.into_iter().find(|path| path.exists())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        if std::process::Command::new("which")
+            .arg("ollama")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+        {
+            Some(PathBuf::from("ollama"))
+        } else {
+            None
+        }
+    }
+}
+
+async fn ensure_ollama_available(endpoint: &str) -> bool {
+    if check_ollama_available(endpoint).await {
+        return true;
+    }
+
+    let Some(ollama) = resolve_ollama_executable() else {
+        return false;
+    };
+
+    let _ = Command::new(ollama)
+        .arg("serve")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+
+    for _ in 0..15 {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        if check_ollama_available(endpoint).await {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn provider_privacy_mode(config: &AICapabilityConfig) -> &'static str {
+    match &config.privacy_mode {
+        crate::models::PrivacyMode::Maximum => "full_isolation",
+        crate::models::PrivacyMode::Enhanced => "local_only",
+        crate::models::PrivacyMode::Standard => "local_only",
+    }
+}
+
+fn enabled_ai_models(config: &AICapabilityConfig) -> Vec<String> {
+    let mut models: Vec<String> = config.model_preferences
+        .iter()
+        .filter(|model| model.enabled)
+        .map(|model| model.name.trim().to_lowercase())
+        .filter(|model| !model.is_empty())
+        .collect();
+
+    if models.is_empty() {
+        if let Some(ollama_config) = &config.ollama_config {
+            models = ollama_config.models_to_install
+                .iter()
+                .map(|model| model.trim().to_lowercase())
+                .filter(|model| !model.is_empty())
+                .collect();
+        }
+    }
+
+    if models.is_empty() {
+        models.push("llama3.1:8b".to_string());
+    }
+
+    models.sort();
+    models.dedup();
+    models
 }
 
 fn validate_model_requirements(
@@ -603,51 +738,7 @@ fn validate_model_requirements(
 /// but not serving".
 #[command]
 pub async fn check_ollama_installed() -> Result<bool, String> {
-    #[cfg(target_os = "windows")]
-    {
-        // 1. Try PATH lookup first
-        if std::process::Command::new("where")
-            .arg("ollama")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false)
-        {
-            return Ok(true);
-        }
-        // 2. Check the canonical Windows install location
-        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-            let path = std::path::PathBuf::from(&local_app_data)
-                .join("Programs")
-                .join("Ollama")
-                .join("ollama.exe");
-            if path.exists() {
-                return Ok(true);
-            }
-        }
-        // 3. Fallback: run `ollama --version` directly
-        let ok = std::process::Command::new("ollama")
-            .arg("--version")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
-        Ok(ok)
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        // PATH check only on Linux/macOS
-        let ok = std::process::Command::new("which")
-            .arg("ollama")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
-        Ok(ok)
-    }
+    Ok(resolve_ollama_executable().is_some())
 }
 
 /// Install Ollama — Windows, Linux, and macOS branches.
