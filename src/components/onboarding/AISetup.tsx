@@ -90,6 +90,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
   })
   
   const [ollamaAvailable, setOllamaAvailable] = useState<boolean | null>(null)
+  const [ollamaInstalled, setOllamaInstalled] = useState<boolean | null>(null)
   const [validationResult, setValidationResult] = useState<any>(null)
   const [isValidating, setIsValidating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -99,6 +100,7 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
 
   useEffect(() => {
     loadExistingConfig()
+    checkOllamaInstalled()
     checkOllamaAvailability()
   }, [])
 
@@ -115,6 +117,15 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
       setConfig(existingConfig)
     } catch (error) {
       console.error('Failed to load existing config:', error)
+    }
+  }
+
+  const checkOllamaInstalled = async () => {
+    try {
+      const installed = await invoke<boolean>('check_ollama_installed')
+      setOllamaInstalled(installed)
+    } catch {
+      setOllamaInstalled(false)
     }
   }
 
@@ -146,7 +157,11 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
       ...prev,
       ai_serving_enabled: enabled,
       ollama_config: enabled ? {
-        install_requested: ollamaAvailable === false,
+        // install_requested=true only when we have confirmed the binary is absent.
+        // ollamaInstalled===false  → confirmed not installed → request install
+        // ollamaInstalled===null   → still checking → don't request install yet
+        // ollamaInstalled===true   → already installed → never request install
+        install_requested: ollamaInstalled === false,
         api_endpoint: 'http://localhost:11434',
         models_to_install: ['llama3.1:8b'],
         auto_update: false
@@ -202,8 +217,8 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
     try {
       await invoke('save_ai_config', { config })
       
-      // Guard: only install when availability is confirmed false (not null/loading or true)
-      if (config.ollama_config?.install_requested && ollamaAvailable === false) {
+      // Guard: only install when binary is confirmed absent (not just API not running)
+      if (config.ollama_config?.install_requested && ollamaInstalled === false) {
         try {
           await invoke('install_ollama')
           toast.success('Ollama installation initiated successfully')
@@ -295,8 +310,12 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Ollama Runtime
-              <Badge variant={ollamaAvailable ? "default" : "destructive"}>
-                {ollamaAvailable ? "Available" : "Required"}
+              <Badge variant={
+                ollamaAvailable ? "default" :
+                ollamaInstalled ? "secondary" :
+                "destructive"
+              }>
+                {ollamaAvailable ? "Running" : ollamaInstalled ? "Installed (not running)" : "Not Installed"}
               </Badge>
             </CardTitle>
             <CardDescription>
@@ -304,7 +323,8 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!ollamaAvailable && (
+            {/* Not installed at all — offer to install */}
+            {ollamaInstalled === false && (
               <Alert>
                 <AlertDescription>
                   <strong>Ollama Required:</strong> AI serving requires the Ollama runtime. 
@@ -312,7 +332,6 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
                     href="#" 
                     onClick={async (e) => {
                       e.preventDefault();
-                      // BUG FIX: Open Ollama download page in browser
                       await open('https://ollama.com/download');
                     }}
                     className="text-blue-600 hover:underline"
@@ -323,26 +342,45 @@ export default function AISetup({ onNext, onBack }: AISetupProps) {
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Installed but API not running — prompt to start, not reinstall */}
+            {ollamaInstalled === true && !ollamaAvailable && (
+              <Alert>
+                <AlertDescription>
+                  <strong>Ollama is installed</strong> but the API is not running on port 11434.
+                  Start it with <code className="bg-muted px-1 rounded">ollama serve</code> (or launch the Ollama app),
+                  then continue.
+                </AlertDescription>
+              </Alert>
+            )}
             
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="ollama-install"
-                checked={config.ollama_config?.install_requested || false}
-                onCheckedChange={(checked: boolean) => {
-                  setConfig(prev => ({
-                    ...prev,
-                    ollama_config: prev.ollama_config ? {
-                      ...prev.ollama_config,
-                      install_requested: checked
-                    } : undefined
-                  }))
-                }}
-                disabled={ollamaAvailable ?? false}
-              />
-              <Label htmlFor="ollama-install">
-                {ollamaAvailable ? "Ollama runtime detected" : "Auto-install Ollama runtime"}
-              </Label>
-            </div>
+            {/* Only show install checkbox when Ollama is genuinely absent */}
+            {ollamaInstalled === false && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ollama-install"
+                  checked={config.ollama_config?.install_requested || false}
+                  onCheckedChange={(checked: boolean) => {
+                    setConfig(prev => ({
+                      ...prev,
+                      ollama_config: prev.ollama_config ? {
+                        ...prev.ollama_config,
+                        install_requested: checked
+                      } : undefined
+                    }))
+                  }}
+                />
+                <Label htmlFor="ollama-install">Auto-install Ollama runtime</Label>
+              </div>
+            )}
+
+            {/* Installed and running — show confirmation only */}
+            {ollamaInstalled === true && ollamaAvailable && (
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <span className="w-3 h-3 rounded-full bg-primary inline-block" />
+                <span>Ollama runtime detected and running</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

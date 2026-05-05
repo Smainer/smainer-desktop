@@ -86,6 +86,7 @@ describe('AISetup - Continue Button Behavior', () => {
           compatibility_status: 'Incompatible',
         })
       }
+      if (cmd === 'check_ollama_installed') return Promise.resolve(false)
       if (cmd === 'save_ai_config') {
         return Promise.resolve(undefined)
       }
@@ -160,6 +161,7 @@ describe('AISetup - Continue Button Behavior', () => {
           compatibility_status: 'Incompatible',
         })
       }
+      if (cmd === 'check_ollama_installed') return Promise.resolve(false)
       if (cmd === 'save_ai_config') {
         return Promise.resolve(undefined)
       }
@@ -252,6 +254,7 @@ describe('AISetup - Continue Button Behavior', () => {
       if (cmd === 'install_ollama') {
         return savePromise
       }
+      if (cmd === 'check_ollama_installed') return Promise.resolve(false)
       return Promise.reject(new Error('Unknown command'))
     })
 
@@ -308,6 +311,10 @@ describe('AISetup - Continue Button Behavior', () => {
           privacy_mode: 'Standard',
           resources: { max_cpu_percent: 80, max_ram_gb: 8 },
         })
+      }
+      if (cmd === 'check_ollama_installed') {
+        // also never resolves — ollamaInstalled stays null
+        return new Promise(() => {})
       }
       if (cmd === 'validate_ai_capabilities') {
         return Promise.resolve({
@@ -375,6 +382,7 @@ describe('AISetup - Continue Button Behavior', () => {
           compatibility_status: 'Compatible',
         })
       }
+      if (cmd === 'check_ollama_installed') return Promise.resolve(true)
       if (cmd === 'save_ai_config') return Promise.resolve(undefined)
       return Promise.reject(new Error('Unknown command'))
     })

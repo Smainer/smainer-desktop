@@ -597,9 +597,69 @@ fn validate_model_requirements(
     }
 }
 
+/// Check whether the Ollama binary is present on disk (installed), regardless of
+/// whether the API service is currently running.  This is separate from the HTTP
+/// liveness probe so the frontend can distinguish "not installed" from "installed
+/// but not serving".
+#[command]
+pub async fn check_ollama_installed() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        // 1. Try PATH lookup first
+        if std::process::Command::new("where")
+            .arg("ollama")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+        {
+            return Ok(true);
+        }
+        // 2. Check the canonical Windows install location
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let path = std::path::PathBuf::from(&local_app_data)
+                .join("Programs")
+                .join("Ollama")
+                .join("ollama.exe");
+            if path.exists() {
+                return Ok(true);
+            }
+        }
+        // 3. Fallback: run `ollama --version` directly
+        let ok = std::process::Command::new("ollama")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        Ok(ok)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // PATH check only on Linux/macOS
+        let ok = std::process::Command::new("which")
+            .arg("ollama")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        Ok(ok)
+    }
+}
+
 /// Install Ollama — Windows, Linux, and macOS branches.
+/// Always checks whether Ollama is already installed before downloading.
 #[command]
 pub async fn install_ollama() -> Result<String, String> {
+    // Early return: skip download if Ollama binary already exists on disk.
+    if check_ollama_installed().await.unwrap_or(false) {
+        tracing::info!("Ollama binary detected — skipping installer download.");
+        return Ok("Ollama is already installed".to_string());
+    }
+
     #[cfg(target_os = "windows")]
     {
         tracing::info!("Starting Ollama installation for Windows...");

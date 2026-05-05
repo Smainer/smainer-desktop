@@ -51,6 +51,7 @@ async fn main() {
             provider::load_ai_config,
             provider::validate_ai_capabilities,
             provider::install_ollama,
+            provider::check_ollama_installed,
             provider::get_provider_log_path_cmd,
             
             // Wallet commands
