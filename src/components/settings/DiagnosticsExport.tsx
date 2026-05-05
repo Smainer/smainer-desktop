@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { toast } from 'sonner'
@@ -9,6 +9,14 @@ interface DiagnosticsBundle {
   bundle_path: string;
   created_at: string;
   items_collected: string[];
+  summary?: {
+    provider_running: boolean;
+    relayer_health_ok: boolean;
+    ollama_api_ok: boolean;
+    ai_enabled: boolean;
+    node_id: string;
+    relayer_url: string;
+  };
 }
 
 export default function DiagnosticsExport() {
@@ -107,6 +115,14 @@ export default function DiagnosticsExport() {
             <p className="text-sm text-green-800 mb-2">
               Items: {lastBundle.items_collected.join(', ')}
             </p>
+            {lastBundle.summary && (
+              <div className="text-xs text-green-800 mb-2 grid grid-cols-1 md:grid-cols-2 gap-1">
+                <span>Provider: {lastBundle.summary.provider_running ? 'running' : 'stopped'}</span>
+                <span>Relayer health: {lastBundle.summary.relayer_health_ok ? 'ok' : 'failed'}</span>
+                <span>Ollama API: {lastBundle.summary.ollama_api_ok ? 'ok' : 'failed'}</span>
+                <span>AI enabled: {lastBundle.summary.ai_enabled ? 'yes' : 'no'}</span>
+              </div>
+            )}
             <p className="text-xs text-green-700 font-mono break-all">
               {lastBundle.bundle_path}
             </p>
