@@ -90,6 +90,21 @@ export default function NodeStatus({ status }: NodeStatusProps) {
   const uptime = status?.uptime || 0
   const uptimeHours = Math.floor(uptime / 3600)
   const uptimeMinutes = Math.floor((uptime % 3600) / 60)
+  const providerFailed = status?.network_status === 'provider_failed'
+  const statusDescription = startProvider.isPending
+    ? 'Connecting to network...'
+    : stopProvider.isPending
+      ? 'Shutting down...'
+      : status?.is_online
+        ? 'Your node is running and accepting tasks'
+        : providerFailed
+          ? 'Provider failed to start - click Debug for logs'
+          : status?.network_status === 'connecting'
+            ? 'Starting up - connecting to relayer...'
+            : status?.relayer_connected === false && status?.network_status === 'disconnected'
+              ? 'Node offline - provider is not running'
+              : 'Node is offline'
+  const relayerLabel = status?.relayer_connected ? 'Online' : providerFailed ? 'Provider failed' : status?.network_status === 'connecting' ? 'Starting' : 'Offline'
 
   return (
     <div className="space-y-6">
@@ -104,7 +119,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
                 }`} />
               </CardTitle>
               <CardDescription>
-                {startProvider.isPending ? 'Connecting to network...' : stopProvider.isPending ? 'Shutting down...' : status?.is_online ? 'Your node is running and accepting tasks' : status?.network_status === 'connecting' ? 'Starting up — connecting to relayer...' : status?.relayer_connected === false && status?.network_status === 'disconnected' ? 'Node offline - unable to connect to relayer' : 'Node is offline'}
+                {statusDescription}
               </CardDescription>
             </div>
                        <div className="flex gap-2">
@@ -153,7 +168,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
             </div>
             <div className="text-center p-3 bg-card rounded-lg">
               <div className="text-2xl font-bold text-primary">
-                {status?.relayer_connected ? 'Online' : status?.network_status === 'connecting' ? 'Starting' : 'Offline'}
+                {relayerLabel}
               </div>
               <div className="text-xs text-muted-foreground">Relayer</div>
             </div>

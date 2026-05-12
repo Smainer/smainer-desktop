@@ -1,12 +1,12 @@
-use serde::{Deserialize, Serialize};
-use tauri::{command, State};
+use crate::commands::provider::{recent_provider_error_summary, ProviderState};
+use crate::models::{EarningsData, NodeStatus, TaskHistoryEntry};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use crate::models::{NodeStatus, EarningsData, TaskHistoryEntry};
-use crate::commands::provider::ProviderState;
+use tauri::{command, State};
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,8 +50,10 @@ struct StoredWallet {
 fn get_wallet_address_local() -> Option<String> {
     let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     path.push(".smainer/wallet.json");
-    if !path.exists() { return None; }
-    
+    if !path.exists() {
+        return None;
+    }
+
     let content = fs::read_to_string(path).ok()?;
     let stored: StoredWallet = serde_json::from_str(&content).ok()?;
     Some(stored.address)
@@ -74,12 +76,19 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
     let wallet_addr = get_wallet_address_local().unwrap_or_default();
     let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
+    let provider_error = if is_running {
+        None
+    } else {
+        recent_provider_error_summary()
+    };
 
     // Compute uptime from process start time (tracked locally, no relayer needed)
     let uptime_secs: u64 = {
         if let Ok(guard) = state.start_time.lock() {
             guard.as_ref().map(|t| t.elapsed().as_secs()).unwrap_or(0)
-        } else { 0 }
+        } else {
+            0
+        }
     };
 
     // Default offline status
@@ -94,7 +103,13 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
         cpu_usage: 0.0,
         memory_usage: 0.0,
         gpu_usage: None,
-        network_status: if is_running { "connecting".to_string() } else { "disconnected".to_string() },
+        network_status: if is_running {
+            "connecting".to_string()
+        } else if provider_error.is_some() {
+            "provider_failed".to_string()
+        } else {
+            "disconnected".to_string()
+        },
         relayer_connected: false,
         provider_version: "0.1.0".to_string(),
         node_tier: "standard".to_string(),
@@ -106,17 +121,27 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
             .timeout(std::time::Duration::from_secs(10))
             .build()
             .map_err(|e| e.to_string())?;
-            
+
         // BUG FIX: Check relayer health endpoint first
         let health_url = format!("{}/api/v1/health", relayer_url);
-        let relayer_healthy = matches!(client.get(&health_url).send().await, Ok(r) if r.status().is_success());
-        
+        let relayer_healthy =
+            matches!(client.get(&health_url).send().await, Ok(r) if r.status().is_success());
+
         if relayer_healthy {
             // Correct relayer endpoint: /api/v1/nodes/{node_id}
-            let node_id = wallet_addr.trim_start_matches("0x").chars().filter(|c| c.is_alphanumeric()).take(24).collect::<String>();
-            let node_id = if node_id.is_empty() { wallet_addr.clone() } else { node_id };
+            let node_id = wallet_addr
+                .trim_start_matches("0x")
+                .chars()
+                .filter(|c| c.is_alphanumeric())
+                .take(24)
+                .collect::<String>();
+            let node_id = if node_id.is_empty() {
+                wallet_addr.clone()
+            } else {
+                node_id
+            };
             let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
-            
+
             match client.get(&url).send().await {
                 Ok(resp) => {
                     if resp.status().is_success() {
@@ -137,24 +162,26 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
                         status.is_online = true; // Process is running
                         status.relayer_connected = true;
                         // Fix 5: Better registration timeout detection
-                        let current_time = Utc::now();
                         // Check if provider has been running > 30 seconds but still not registered
                         let registration_timeout = std::time::Duration::from_secs(30);
                         let provider_running_duration = std::time::Duration::from_secs(60); // Assume 60s if we can't determine exact start time
-                        
+
                         if provider_running_duration > registration_timeout {
-                            status.network_status = "Provider running — registration failed (check logs)".to_string();
+                            status.network_status =
+                                "Provider running — registration failed (check logs)".to_string();
                         } else {
                             status.network_status = "connected_unregistered".to_string();
                         }
                     }
-                },
+                }
                 Err(_) => {
                     // Process running, relayer healthy, but node lookup failed
                     status.is_online = true; // Process is running
                     status.relayer_connected = false;
                     // Fix 5: Better timeout error message
-                    status.network_status = "Provider running — unable to connect to relayer (check network)".to_string();
+                    status.network_status =
+                        "Provider running — unable to connect to relayer (check network)"
+                            .to_string();
                 }
             }
         } else {
@@ -172,7 +199,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 pub async fn get_earnings() -> Result<EarningsData, String> {
     // Similar logic: fetch from Relayer API /provider/{address}/earnings
     // For now returning zeros if fetch fails
-    
+
     Ok(EarningsData {
         total_earnings: 0,
         today_earnings: 0,

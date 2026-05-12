@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, act } from '@testing-library/react'
 import { renderHook, waitFor as waitForHook } from '@testing-library/react'
 import { invoke } from '@tauri-apps/api/core'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import NodeStatus from '../components/dashboard/NodeStatus'
 import { useNodeStatus } from '../hooks/useNodeStatus'
 import { useStartProvider, useStopProvider } from '../hooks/useProviderCommands'
-import { createTestQueryClient, TestQueryClientProvider } from './test-utils'
+import { TestQueryClientProvider } from './test-utils'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -204,7 +202,7 @@ describe('NodeStatus component — relayer status display', () => {
         })} />
       </TestQueryClientProvider>
     )
-    expect(screen.getByText(/unable to connect to relayer/i)).toBeInTheDocument()
+    expect(screen.getByText(/provider is not running/i)).toBeInTheDocument()
   })
 
   it('shows running description when online', () => {
@@ -286,6 +284,20 @@ describe('NodeStatus component — relayer status display', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument()
     expect(screen.queryByText('Starting')).not.toBeInTheDocument()
   })
+
+  it('shows provider failure when provider exits before relayer registration', () => {
+    render(
+      <TestQueryClientProvider>
+        <NodeStatus status={makeStatus({
+          is_online: false,
+          relayer_connected: false,
+          network_status: 'provider_failed',
+        })} />
+      </TestQueryClientProvider>
+    )
+    expect(screen.getByText(/provider failed to start/i)).toBeInTheDocument()
+    expect(screen.getByText('Provider failed')).toBeInTheDocument()
+  })
 })
 
 // ── 4. useStartProvider mutation ─────────────────────────────────────────────
@@ -295,7 +307,6 @@ describe('useStartProvider mutation', () => {
 
   it('calls invoke("start_provider") with correct config shape', async () => {
     vi.mocked(invoke).mockResolvedValue(true)
-    const user = userEvent.setup()
 
     const { result } = renderHook(() => useStartProvider(), { wrapper })
 
