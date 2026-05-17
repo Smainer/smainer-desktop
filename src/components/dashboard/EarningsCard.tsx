@@ -1,4 +1,3 @@
-import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card.tsx'
@@ -43,7 +42,7 @@ export default function EarningsCard() {
     )
   }
 
-  const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`
+  const formatStrk = (wei: number) => `${(wei / 1_000_000_000_000_000_000).toFixed(4)} STRK`
   const todayChange = earnings?.today_earnings && earnings?.yesterday_earnings 
     ? ((earnings.today_earnings - earnings.yesterday_earnings) / earnings.yesterday_earnings * 100)
     : 0
@@ -60,7 +59,7 @@ export default function EarningsCard() {
         {/* Total Earnings */}
         <div className="text-center p-4 bg-card rounded-lg border border-primary/20">
           <div className="text-3xl font-bold text-primary">
-            {formatCurrency(earnings?.total_earnings || 0)}
+            {formatStrk(earnings?.total_earnings || 0)}
           </div>
           <div className="text-sm text-muted-foreground mt-1">Total Earned</div>
         </div>
@@ -68,7 +67,7 @@ export default function EarningsCard() {
         {/* Today's Earnings */}
         <div className="flex items-center justify-between p-3 bg-card rounded-lg">
           <div>
-            <div className="font-semibold text-primary">{formatCurrency(earnings?.today_earnings || 0)}</div>
+            <div className="font-semibold text-primary">{formatStrk(earnings?.today_earnings || 0)}</div>
             <div className="text-sm text-muted-foreground">Today</div>
           </div>
           <div className={`text-sm font-medium ${
@@ -81,22 +80,22 @@ export default function EarningsCard() {
         {/* Weekly Earnings */}
         <div className="flex items-center justify-between p-3 bg-card rounded-lg">
           <div>
-            <div className="font-semibold text-primary">{formatCurrency(earnings?.this_week_earnings || 0)}</div>
+            <div className="font-semibold text-primary">{formatStrk(earnings?.this_week_earnings || 0)}</div>
             <div className="text-sm text-muted-foreground">This Week</div>
           </div>
           <div className="text-sm text-muted-foreground">
-            {formatCurrency((earnings?.this_week_earnings || 0) / 7)} avg/day
+            {formatStrk((earnings?.this_week_earnings || 0) / 7)} avg/day
           </div>
         </div>
 
         {/* Monthly Earnings */}
         <div className="flex items-center justify-between p-3 bg-card rounded-lg">
           <div>
-            <div className="font-semibold text-primary">{formatCurrency(earnings?.this_month_earnings || 0)}</div>
+            <div className="font-semibold text-primary">{formatStrk(earnings?.this_month_earnings || 0)}</div>
             <div className="text-sm text-muted-foreground">This Month</div>
           </div>
           <div className="text-sm text-muted-foreground">
-            {formatCurrency((earnings?.this_month_earnings || 0) / 30)} avg/day
+            {formatStrk((earnings?.this_month_earnings || 0) / 30)} avg/day
           </div>
         </div>
 
@@ -106,7 +105,7 @@ export default function EarningsCard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-semibold text-primary">
-                  {formatCurrency(earnings?.pending_rewards || 0)}
+                  {formatStrk(earnings?.pending_rewards || 0)}
                 </div>
                 <div className="text-sm text-muted-foreground">Pending Payout</div>
               </div>
@@ -137,7 +136,7 @@ export default function EarningsCard() {
                   <div 
                     className="w-full bg-primary/20 rounded-t min-h-[2px] transition-all duration-300"
                     style={{ height: `${Math.max(height, 8)}%` }}
-                    title={`${date.toLocaleDateString()}: ${formatCurrency(earning)}`}
+                    title={`${date.toLocaleDateString()}: ${formatStrk(earning)}`}
                   />
                   <div className="text-xs text-muted-foreground mt-1">
                     {date.toLocaleDateString('en', { weekday: 'narrow' })}

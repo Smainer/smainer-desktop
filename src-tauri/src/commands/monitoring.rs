@@ -1,7 +1,7 @@
 use crate::commands::provider::{recent_provider_error_summary, ProviderState};
 use crate::models::{EarningsData, NodeStatus, TaskHistoryEntry};
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -57,6 +57,46 @@ fn get_wallet_address_local() -> Option<String> {
     let content = fs::read_to_string(path).ok()?;
     let stored: StoredWallet = serde_json::from_str(&content).ok()?;
     Some(stored.address)
+}
+
+fn node_id_from_address(addr: &str) -> String {
+    let stripped = addr.trim_start_matches("0x");
+    let id: String = stripped
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .take(24)
+        .collect();
+    if id.is_empty() {
+        addr.to_string()
+    } else {
+        id
+    }
+}
+
+fn parse_utc_datetime(value: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|dt| dt.with_timezone(&Utc))
+        .ok()
+        .or_else(|| {
+            NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S%.f")
+                .ok()
+                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+        })
+}
+
+fn empty_earnings() -> EarningsData {
+    EarningsData {
+        total_earnings: 0,
+        today_earnings: 0,
+        yesterday_earnings: 0,
+        this_week_earnings: 0,
+        this_month_earnings: 0,
+        daily_earnings: HashMap::new(),
+        monthly_earnings: HashMap::new(),
+        pending_rewards: 0,
+        last_payout: None,
+        next_payout: None,
+    }
 }
 
 #[command]
@@ -129,33 +169,62 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
         if relayer_healthy {
             // Correct relayer endpoint: /api/v1/nodes/{node_id}
-            let node_id = wallet_addr
-                .trim_start_matches("0x")
-                .chars()
-                .filter(|c| c.is_alphanumeric())
-                .take(24)
-                .collect::<String>();
-            let node_id = if node_id.is_empty() {
-                wallet_addr.clone()
-            } else {
-                node_id
-            };
+            let node_id = node_id_from_address(&wallet_addr);
             let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
 
             match client.get(&url).send().await {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        // Try to parse real status from relayer
-                        if let Ok(real_status) = resp.json::<NodeStatus>().await {
-                            status = real_status;
-                            status.is_online = true; // Confirmed by relayer
-                            status.relayer_connected = true;
-                            status.network_status = "connected".to_string();
-                        } else {
-                            // Process running, relayer healthy, but can't parse response
-                            status.is_online = true; // Process is running
-                            status.relayer_connected = true;
-                            status.network_status = "connected".to_string();
+                        status.is_online = true;
+                        status.relayer_connected = true;
+                        status.network_status = "connected".to_string();
+
+                        if let Ok(node_info) = resp.json::<serde_json::Value>().await {
+                            status.node_id = node_info
+                                .get("node_id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(&node_id)
+                                .to_string();
+                            status.tasks_active = node_info
+                                .get("current_tasks")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0) as u32;
+                            status.node_tier = node_info
+                                .get("calculated_tier")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("standard")
+                                .to_string();
+                            if let Some(last_heartbeat) = node_info
+                                .get("last_heartbeat")
+                                .and_then(|v| v.as_str())
+                                .and_then(parse_utc_datetime)
+                            {
+                                status.last_heartbeat = last_heartbeat;
+                            }
+                        }
+
+                        let tasks_url = format!("{}/api/v1/nodes/{}/tasks?limit=200", relayer_url, node_id);
+                        if let Ok(tasks_resp) = client.get(&tasks_url).send().await {
+                            if let Ok(tasks) = tasks_resp.json::<Vec<TaskHistoryEntry>>().await {
+                                let today = Utc::now().date_naive();
+                                status.tasks_completed_today = tasks
+                                    .iter()
+                                    .filter(|task| {
+                                        task.status == "completed"
+                                            && task
+                                                .completed_at
+                                                .map(|completed| completed.date_naive() == today)
+                                                .unwrap_or(false)
+                                    })
+                                    .count() as u32;
+                            }
+                        }
+
+                        let earnings_url = format!("{}/api/v1/nodes/{}/earnings", relayer_url, node_id);
+                        if let Ok(earnings_resp) = client.get(&earnings_url).send().await {
+                            if let Ok(earnings) = earnings_resp.json::<EarningsData>().await {
+                                status.earnings_today = earnings.today_earnings;
+                            }
                         }
                     } else {
                         // Process running but not found in relayer (might still be registering)
@@ -196,25 +265,53 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 }
 
 #[command]
-pub async fn get_earnings() -> Result<EarningsData, String> {
-    // Similar logic: fetch from Relayer API /provider/{address}/earnings
-    // For now returning zeros if fetch fails
+pub async fn get_earnings(state: State<'_, ProviderState>) -> Result<EarningsData, String> {
+    let wallet_addr = match get_wallet_address_local() {
+        Some(address) => address,
+        None => return Ok(empty_earnings()),
+    };
+    let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
+    let node_id = node_id_from_address(&wallet_addr);
+    let url = format!("{}/api/v1/nodes/{}/earnings", relayer_url, node_id);
 
-    Ok(EarningsData {
-        total_earnings: 0,
-        today_earnings: 0,
-        yesterday_earnings: 0,
-        this_week_earnings: 0,
-        this_month_earnings: 0,
-        daily_earnings: HashMap::new(),
-        monthly_earnings: HashMap::new(),
-        pending_rewards: 0,
-        last_payout: None,
-        next_payout: None,
-    })
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    match client.get(&url).send().await {
+        Ok(resp) if resp.status().is_success() => resp
+            .json::<EarningsData>()
+            .await
+            .map_err(|e| e.to_string()),
+        _ => Ok(empty_earnings()),
+    }
 }
 
 #[command]
-pub async fn get_task_history() -> Result<Vec<TaskHistoryEntry>, String> {
-    Ok(Vec::new())
+pub async fn get_task_history(
+    state: State<'_, ProviderState>,
+    limit: Option<u32>,
+) -> Result<Vec<TaskHistoryEntry>, String> {
+    let wallet_addr = match get_wallet_address_local() {
+        Some(address) => address,
+        None => return Ok(Vec::new()),
+    };
+    let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
+    let node_id = node_id_from_address(&wallet_addr);
+    let bounded_limit = limit.unwrap_or(50).clamp(1, 200);
+    let url = format!("{}/api/v1/nodes/{}/tasks?limit={}", relayer_url, node_id, bounded_limit);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    match client.get(&url).send().await {
+        Ok(resp) if resp.status().is_success() => resp
+            .json::<Vec<TaskHistoryEntry>>()
+            .await
+            .map_err(|e| e.to_string()),
+        _ => Ok(Vec::new()),
+    }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.tsx';
 import { Toaster } from './components/ui/sonner.tsx';
@@ -27,6 +27,8 @@ import { useHardwareInfo } from './hooks/useHardwareInfo.ts';
 import './App.css';
 
 const queryClient = new QueryClient();
+
+const formatStrk = (wei: number) => `${(wei / 1_000_000_000_000_000_000).toFixed(4)} STRK`;
 
 export interface AppState {
   onboardingComplete: boolean;
@@ -276,7 +278,7 @@ function AppContent() {
               <div className="text-right">
                 <div className="text-sm text-muted-foreground">Today's Earnings</div>
                 <div className="text-lg font-bold text-primary">
-                  ${((nodeStatus?.earnings_today || 0) / 100).toFixed(2)}
+                  {formatStrk(nodeStatus?.earnings_today || 0)}
                 </div>
               </div>
               <button

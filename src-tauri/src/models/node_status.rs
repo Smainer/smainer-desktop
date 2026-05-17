@@ -11,7 +11,7 @@ pub struct NodeStatus {
     pub last_heartbeat: DateTime<Utc>,
     pub tasks_active: u32,
     pub tasks_completed_today: u32,
-    pub earnings_today: u64, // in cents
+    pub earnings_today: u64, // in STRK wei/stroops
     pub cpu_usage: f64, // percentage
     pub memory_usage: f64, // percentage  
     pub gpu_usage: Option<f64>, // percentage
@@ -28,7 +28,7 @@ pub struct ProviderStatus {
     pub tasks_completed: u32,
     pub tasks_active: u32,
     pub last_heartbeat: DateTime<Utc>,
-    pub earnings_today: u64, // in cents
+    pub earnings_today: u64, // in STRK wei/stroops
     pub cpu_usage: f64,
     pub memory_usage: f64,
     pub gpu_usage: Option<f64>,
@@ -40,14 +40,14 @@ pub struct ProviderStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EarningsData {
-    pub total_earnings: u64, // in cents
+    pub total_earnings: u64, // in STRK wei/stroops
     pub today_earnings: u64,
     pub yesterday_earnings: u64,
     pub this_week_earnings: u64,
     pub this_month_earnings: u64,
-    pub daily_earnings: HashMap<String, u64>, // date -> earnings in cents
-    pub monthly_earnings: HashMap<String, u64>, // month -> earnings in cents
-    pub pending_rewards: u64, // in cents
+    pub daily_earnings: HashMap<String, u64>, // date -> earnings in STRK wei/stroops
+    pub monthly_earnings: HashMap<String, u64>, // month -> earnings in STRK wei/stroops
+    pub pending_rewards: u64, // in STRK wei/stroops
     pub last_payout: Option<DateTime<Utc>>,
     pub next_payout: Option<DateTime<Utc>>,
 }
@@ -61,7 +61,7 @@ pub struct TaskHistoryEntry {
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub duration: Option<u64>, // seconds
-    pub reward: Option<u64>, // in cents
+    pub reward: Option<u64>, // in STRK wei/stroops
     pub client_id: String,
     pub gpu_used: bool,
     pub error_message: Option<String>,
@@ -100,16 +100,16 @@ impl Default for NodeStatus {
 
 #[allow(dead_code)]
 impl EarningsData {
-    pub fn total_earnings_dollars(&self) -> f64 {
-        self.total_earnings as f64 / 100.0
+    pub fn total_earnings_strk(&self) -> f64 {
+        self.total_earnings as f64 / 1_000_000_000_000_000_000.0
     }
     
-    pub fn today_earnings_dollars(&self) -> f64 {
-        self.today_earnings as f64 / 100.0
+    pub fn today_earnings_strk(&self) -> f64 {
+        self.today_earnings as f64 / 1_000_000_000_000_000_000.0
     }
     
-    pub fn pending_rewards_dollars(&self) -> f64 {
-        self.pending_rewards as f64 / 100.0
+    pub fn pending_rewards_strk(&self) -> f64 {
+        self.pending_rewards as f64 / 1_000_000_000_000_000_000.0
     }
 }
 
@@ -127,8 +127,8 @@ impl TaskHistoryEntry {
         self.status == "failed"
     }
     
-    pub fn reward_dollars(&self) -> Option<f64> {
-        self.reward.map(|r| r as f64 / 100.0)
+    pub fn reward_strk(&self) -> Option<f64> {
+        self.reward.map(|r| r as f64 / 1_000_000_000_000_000_000.0)
     }
     
     pub fn duration_minutes(&self) -> Option<f64> {

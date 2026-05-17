@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
@@ -19,6 +19,7 @@ interface TaskHistoryEntry {
 }
 
 const taskTypeLabels = {
+  ai_inference: 'AI',
   image_generation: 'Image',
   text_processing: 'Text', 
   model_training: 'Training',
@@ -46,7 +47,7 @@ export default function TaskHistory() {
     filter === 'all' || task.status === filter
   ) || []
 
-  const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`
+  const formatStrk = (wei: number) => `${(wei / 1_000_000_000_000_000_000).toFixed(4)} STRK`
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = seconds % 60
@@ -151,7 +152,7 @@ export default function TaskHistory() {
                     {task.reward && (
                       <div className="text-right">
                         <div className="font-semibold text-primary">
-                          {formatCurrency(task.reward)}
+                          {formatStrk(task.reward)}
                         </div>
                       </div>
                     )}
@@ -228,7 +229,7 @@ export default function TaskHistory() {
           <div className="mt-4 text-center text-sm text-muted-foreground">
             Total earnings from completed tasks: {' '}
             <span className="font-medium text-primary">
-              {formatCurrency(
+              {formatStrk(
                 tasks?.filter(t => t.status === 'completed' && t.reward)
                      .reduce((sum, t) => sum + (t.reward || 0), 0) || 0
               )}
