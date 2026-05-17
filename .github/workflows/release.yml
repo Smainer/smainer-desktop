@@ -139,7 +139,7 @@ jobs:
           releaseBody: |
             ## Download
 
-            **[⬇ Smainer-setup.exe](https://github.com/Smainer/smainer-desktop/releases/latest/download/Smainer_0.1.0_x64-setup.exe)**
+            **[⬇ Smainer-setup.exe](https://github.com/Smainer/smainer-desktop/releases/latest/download/Smainer_0.1.1_x64-setup.exe)**
 
             Double-click → Next → Install → Done. No command line, no admin needed.
 

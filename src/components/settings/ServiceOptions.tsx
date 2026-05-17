@@ -197,7 +197,7 @@ export default function ServiceOptions({ onReset }: ServiceOptionsProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
-            <div>Version: 0.1.0</div>
+            <div>Version: 0.1.1</div>
             <div>Build: Development</div>
             <div>Provider Version: 0.1.0</div>
             <div className="pt-2 border-t text-muted-foreground">
