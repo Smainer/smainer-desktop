@@ -4,7 +4,7 @@ Earn STRK by running AI compute on your PC.
 
 ## Download
 
-**[⬇ Download Smainer-setup.exe](https://github.com/Smainer/smainer-desktop/releases/latest/download/Smainer_0.1.1_x64-setup.exe)**
+**[⬇ Download Smainer-setup.exe](https://github.com/Smainer/smainer-desktop/releases/latest/download/Smainer_0.1.2_x64-setup.exe)**
 
 > Double-click → Next → Install → Done. No command line. No admin needed.
 

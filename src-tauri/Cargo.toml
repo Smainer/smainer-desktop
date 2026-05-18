@@ -1,6 +1,6 @@
 [package]
 name = "smainer-desktop"
-version = "0.1.1"
+version = "0.1.2"
 description = "Smainer Windows provider node onboarding desktop application"
 authors = ["Smainer Team <team@smainer.com>"]
 license = "MIT"
