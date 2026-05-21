@@ -1,4 +1,3 @@
-import React from 'react'
 import { useHardwareInfo, useSystemRequirements } from '../../hooks/useHardwareInfo'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'

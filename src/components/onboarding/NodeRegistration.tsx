@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useRegisterNode } from '../../hooks/useProviderCommands.ts'
 import { HardwareInfo } from '../../hooks/useHardwareInfo.ts'
 import { Button } from '../ui/button.tsx'

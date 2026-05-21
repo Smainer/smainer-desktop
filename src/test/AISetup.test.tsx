@@ -228,7 +228,7 @@ describe('AISetup - Continue Button Behavior', () => {
     let resolveSave: any
     const savePromise = new Promise((resolve) => { resolveSave = resolve })
 
-    mockInvoke.mockImplementation((cmd: string, args?: any) => {
+    mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'load_ai_config') {
         return Promise.resolve({
           schema_version: '1.0.0',

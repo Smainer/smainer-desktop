@@ -69,17 +69,10 @@ vi.mock('../hooks/useHardwareInfo', () => ({
   useHardwareInfo: () => ({ data: { total_ram: 8589934592, gpus: [] } }),
 }))
 
-const createTestQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-
 describe('App - Onboarding Step Stability', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.mocked(invoke).mockReset()
+    localStorage.clear()
   })
 
   it('should not reset onboarding step when nodeStatus polling updates', async () => {
@@ -144,11 +137,20 @@ describe('App - Onboarding Step Stability', () => {
     expect(mockInvoke).not.toHaveBeenCalled()
   })
 
-  it('should resume from wallet step when wallet exists but not registered', async () => {
+  it('should resume from node registration when wallet exists but provider is not running', async () => {
     const mockInvoke = vi.mocked(invoke)
     mockInvoke
       .mockResolvedValueOnce('0x1234567890abcdef') // wallet exists
       .mockResolvedValueOnce({ is_running: false, relayer_connected: false }) // provider not running
+
+    localStorage.setItem('smainer_provider_config', JSON.stringify({
+      wallet_address: '0x1234567890abcdef',
+      relayer_url: 'https://api.smainer.io',
+      port: 8080,
+      max_tasks: 1,
+      gpu_enabled: true,
+      auto_start: false,
+    }))
     
     const queryClient = createTestQueryClient()
     
@@ -158,10 +160,9 @@ describe('App - Onboarding Step Stability', () => {
       </QueryClientProvider>
     )
 
-    // Should resume at wallet setup step (2), not node registration step (3)
-    // This allows user to review/regenerate wallet before registration
+    // Wallet already exists, so the next actionable step is provider registration/startup.
     await waitFor(() => {
-      expect(screen.getByTestId('wallet-setup')).toBeInTheDocument()
+      expect(screen.getByTestId('node-registration')).toBeInTheDocument()
     })
 
     expect(mockInvoke).toHaveBeenCalledWith('get_wallet_address')

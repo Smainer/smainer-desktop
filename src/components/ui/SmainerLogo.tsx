@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SmainerLogoProps {
   size?: number;
   className?: string;
@@ -34,7 +32,6 @@ export function SmainerLogo({ size = 32, className = '', variant = 'full' }: Sma
   };
 
   const colorSet = colors[variant];
-  const scale = size / 512; // SVG is designed at 512x512
 
   return (
     <svg 
