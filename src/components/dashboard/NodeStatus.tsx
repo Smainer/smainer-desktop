@@ -30,8 +30,12 @@ export default function NodeStatus({ status }: NodeStatusProps) {
 
   const [isExportingDiagnostics, setIsExportingDiagnostics] = useState(false)
   const [lastBundle, setLastBundle] = useState<DiagnosticsBundle | null>(null)
+  const providerFailed = status?.network_status === 'provider_failed'
+  const registrationFailed = status?.network_status === 'registration_failed'
+  const providerRunning = Boolean(status?.is_online || registrationFailed || status?.network_status === 'connecting')
+
   const handleToggleProvider = async () => {
-    if (status?.is_online) {
+    if (providerRunning) {
       stopProvider.mutate()
     } else {
       // Get actual wallet address before starting
@@ -90,12 +94,13 @@ export default function NodeStatus({ status }: NodeStatusProps) {
   const uptime = status?.uptime || 0
   const uptimeHours = Math.floor(uptime / 3600)
   const uptimeMinutes = Math.floor((uptime % 3600) / 60)
-  const providerFailed = status?.network_status === 'provider_failed'
   const statusDescription = startProvider.isPending
     ? 'Connecting to network...'
     : stopProvider.isPending
       ? 'Shutting down...'
-      : status?.is_online
+      : registrationFailed
+        ? 'Provider is running, but the relayer does not recognize this node identity'
+      : status?.relayer_connected
         ? 'Your node is running and accepting tasks'
         : providerFailed
           ? 'Provider failed to start - click Debug for logs'
@@ -104,7 +109,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
             : status?.relayer_connected === false && status?.network_status === 'disconnected'
               ? 'Node offline - provider is not running'
               : 'Node is offline'
-  const relayerLabel = status?.relayer_connected ? 'Online' : providerFailed ? 'Provider failed' : status?.network_status === 'connecting' ? 'Starting' : 'Offline'
+  const relayerLabel = status?.relayer_connected ? 'Online' : registrationFailed ? 'Not registered' : providerFailed ? 'Provider failed' : status?.network_status === 'connecting' ? 'Starting' : 'Offline'
 
   return (
     <div className="space-y-6">
@@ -115,7 +120,7 @@ export default function NodeStatus({ status }: NodeStatusProps) {
               <CardTitle className="flex items-center space-x-2">
                 <span>Node Status</span>
                 <div className={`w-3 h-3 rounded-full ${
-                  status?.is_online ? 'bg-primary' : status?.network_status === 'connecting' ? 'bg-yellow-500' : 'bg-destructive'
+                  status?.relayer_connected ? 'bg-primary' : status?.network_status === 'connecting' ? 'bg-yellow-500' : 'bg-destructive'
                 }`} />
               </CardTitle>
               <CardDescription>
@@ -144,10 +149,10 @@ export default function NodeStatus({ status }: NodeStatusProps) {
                          </Button>
             <Button
               onClick={handleToggleProvider}
-              variant={status?.is_online ? 'destructive' : 'default'}
+              variant={providerRunning ? 'destructive' : 'default'}
               disabled={startProvider.isPending || stopProvider.isPending}
             >
-              {startProvider.isPending ? 'Starting...' : stopProvider.isPending ? 'Stopping...' : status?.is_online ? 'Stop Node' : 'Start Node'}
+              {startProvider.isPending ? 'Starting...' : stopProvider.isPending ? 'Stopping...' : providerRunning ? 'Stop Node' : 'Start Node'}
             </Button>
                      </div>
           </div>
