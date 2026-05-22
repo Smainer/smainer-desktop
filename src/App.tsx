@@ -47,6 +47,14 @@ function AppContent() {
 
   const { data: nodeStatus } = useNodeStatus();
   const { data: hardwareInfo } = useHardwareInfo();
+  const nodeConnected = Boolean(nodeStatus?.relayer_connected && nodeStatus?.network_status === 'connected');
+  const nodeStatusLabel = nodeConnected
+    ? 'Online'
+    : nodeStatus?.network_status === 'registration_failed'
+      ? 'Needs setup'
+      : nodeStatus?.is_online
+        ? 'Starting'
+        : 'Offline';
 
   // Check onboarding state and auto-start provider on app launch when configured.
   useEffect(() => {
@@ -268,9 +276,9 @@ function AppContent() {
                 <h1 className="text-2xl font-bold text-white tracking-tight">Smainer Desktop</h1>
               </div>
               <div className="flex items-center space-x-3">
-                <div className={'w-3 h-3 rounded-full ' + (nodeStatus?.is_online ? 'bg-primary' : 'bg-destructive')} />
+                <div className={'w-3 h-3 rounded-full ' + (nodeConnected ? 'bg-primary' : nodeStatus?.is_online ? 'bg-yellow-500' : 'bg-destructive')} />
                 <span className="text-sm text-muted-foreground">
-                  {nodeStatus?.is_online ? 'Online' : 'Offline'}
+                  {nodeStatusLabel}
                 </span>
               </div>
             </div>

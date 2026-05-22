@@ -67,7 +67,7 @@ fn node_id_from_address(addr: &str) -> String {
         .take(24)
         .collect();
     if id.is_empty() {
-        addr.to_string()
+        "default-node".to_string()
     } else {
         id
     }
@@ -115,6 +115,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
     };
 
     let wallet_addr = get_wallet_address_local().unwrap_or_default();
+    let expected_node_id = node_id_from_address(&wallet_addr);
     let relayer_url = state.relayer_url.lock().map_err(|e| e.to_string())?.clone();
     let provider_error = if is_running {
         None
@@ -134,7 +135,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
     // Default offline status
     let mut status = NodeStatus {
         is_online: false, // Only set true when relayer confirms
-        node_id: wallet_addr.clone(),
+        node_id: expected_node_id.clone(),
         uptime: uptime_secs,
         last_heartbeat: Utc::now(),
         tasks_active: 0,
@@ -169,8 +170,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
 
         if relayer_healthy {
             // Correct relayer endpoint: /api/v1/nodes/{node_id}
-            let node_id = node_id_from_address(&wallet_addr);
-            let url = format!("{}/api/v1/nodes/{}", relayer_url, node_id);
+            let url = format!("{}/api/v1/nodes/{}", relayer_url, expected_node_id);
 
             match client.get(&url).send().await {
                 Ok(resp) => {
@@ -183,7 +183,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
                             status.node_id = node_info
                                 .get("node_id")
                                 .and_then(|v| v.as_str())
-                                .unwrap_or(&node_id)
+                                .unwrap_or(&expected_node_id)
                                 .to_string();
                             status.tasks_active = node_info
                                 .get("current_tasks")
@@ -203,7 +203,7 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
                             }
                         }
 
-                        let tasks_url = format!("{}/api/v1/nodes/{}/tasks?limit=200", relayer_url, node_id);
+                        let tasks_url = format!("{}/api/v1/nodes/{}/tasks?limit=200", relayer_url, expected_node_id);
                         if let Ok(tasks_resp) = client.get(&tasks_url).send().await {
                             if let Ok(tasks) = tasks_resp.json::<Vec<TaskHistoryEntry>>().await {
                                 let today = Utc::now().date_naive();
@@ -220,27 +220,21 @@ pub async fn get_node_status(state: State<'_, ProviderState>) -> Result<NodeStat
                             }
                         }
 
-                        let earnings_url = format!("{}/api/v1/nodes/{}/earnings", relayer_url, node_id);
+                        let earnings_url = format!("{}/api/v1/nodes/{}/earnings", relayer_url, expected_node_id);
                         if let Ok(earnings_resp) = client.get(&earnings_url).send().await {
                             if let Ok(earnings) = earnings_resp.json::<EarningsData>().await {
                                 status.earnings_today = earnings.today_earnings;
                             }
                         }
+                    } else if resp.status().as_u16() == 404 {
+                        status.is_online = true;
+                        status.relayer_connected = false;
+                        status.network_status = "registration_failed".to_string();
+                        status.node_tier = "unregistered".to_string();
                     } else {
-                        // Process running but not found in relayer (might still be registering)
-                        status.is_online = true; // Process is running
-                        status.relayer_connected = true;
-                        // Fix 5: Better registration timeout detection
-                        // Check if provider has been running > 30 seconds but still not registered
-                        let registration_timeout = std::time::Duration::from_secs(30);
-                        let provider_running_duration = std::time::Duration::from_secs(60); // Assume 60s if we can't determine exact start time
-
-                        if provider_running_duration > registration_timeout {
-                            status.network_status =
-                                "Provider running — registration failed (check logs)".to_string();
-                        } else {
-                            status.network_status = "connected_unregistered".to_string();
-                        }
+                        status.is_online = true;
+                        status.relayer_connected = false;
+                        status.network_status = format!("relayer_error_{}", resp.status().as_u16());
                     }
                 }
                 Err(_) => {

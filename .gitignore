@@ -56,9 +56,6 @@ Thumbs.db
 icons_backup_*/
 
 # Environment variables
-.env
-.env.local
-.env.production
 
 # Temporary files
 *.tmp
@@ -101,3 +98,4 @@ Cargo.lock
 src-tauri/binaries/smainer-provider
 src-tauri/binaries/smainer-provider-*
 src-tauri/binaries/*.linux-backup
+config.bat
