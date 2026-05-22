@@ -62,6 +62,7 @@ AI serving enables your node to run language models for higher rewards but requi
 - **Ollama Runtime**: Required for all AI serving. Auto-installed by desktop app or available at [ollama.ai](https://ollama.ai)
 - **Model Downloads**: Range from 2GB (phi3:mini) to 40GB (llama3.1:70b). Downloaded automatically on first use.
 - **Network Stability**: Consistent connection required during inference tasks to maintain SLA commitments.
+- **Troubleshooting**: If AI tasks fail with an Ollama `/api/generate` error, see [Provider Ollama Troubleshooting](docs/PROVIDER_OLLAMA_TROUBLESHOOTING.md).
 
 ## What happens after install
 
