@@ -290,8 +290,19 @@ pub async fn start_provider(
             .as_ref()
             .map(|config| config.api_endpoint.clone())
             .unwrap_or_else(|| "http://localhost:11434".to_string());
-        let ollama_available = ensure_ollama_available(&ollama_endpoint).await;
-        let models = enabled_ai_models(&ai_config).join(",");
+        let configured_models = enabled_ai_models(&ai_config);
+        let ollama_server_available = ensure_ollama_available(&ollama_endpoint).await;
+        let missing_models = if ollama_server_available {
+            missing_ollama_models(&ollama_endpoint, &configured_models).await
+        } else {
+            configured_models.clone()
+        };
+        let ollama_available = ollama_server_available && missing_models.is_empty();
+        let models = if ollama_available {
+            configured_models.join(",")
+        } else {
+            String::new()
+        };
 
         cmd.env("OLLAMA_BASE_URL", &ollama_endpoint);
         cmd.env("CAPABILITY_AI_ENABLED", "true");
@@ -310,6 +321,11 @@ pub async fn start_provider(
             .open(get_provider_log_path().with_file_name("provider-startup.log"))
         {
             let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
+            let configured_models_display = if configured_models.is_empty() {
+                "none".to_string()
+            } else {
+                configured_models.join(",")
+            };
             let _ = writeln!(startup_log, "[{}] AI Capabilities:", timestamp);
             let _ = writeln!(startup_log, "  • AI Serving: enabled");
             let _ = writeln!(startup_log, "  • Ollama Endpoint: {}", ollama_endpoint);
@@ -325,7 +341,21 @@ pub async fn start_provider(
             let _ = writeln!(
                 startup_log,
                 "  • Models Configured: {}",
+                configured_models_display
+            );
+            let _ = writeln!(
+                startup_log,
+                "  • Models Advertised: {}",
                 if models.is_empty() { "none" } else { &models }
+            );
+            let _ = writeln!(
+                startup_log,
+                "  • Models Missing: {}",
+                if missing_models.is_empty() {
+                    "none".to_string()
+                } else {
+                    missing_models.join(",")
+                }
             );
             let _ = writeln!(
                 startup_log,
@@ -822,6 +852,53 @@ async fn check_ollama_available(endpoint: &str) -> bool {
         Ok(response) => response.status().is_success(),
         Err(_) => false,
     }
+}
+
+async fn missing_ollama_models(endpoint: &str, required_models: &[String]) -> Vec<String> {
+    #[derive(Deserialize)]
+    struct OllamaTagsResponse {
+        models: Vec<OllamaTagModel>,
+    }
+
+    #[derive(Deserialize)]
+    struct OllamaTagModel {
+        name: String,
+        model: Option<String>,
+    }
+
+    if required_models.is_empty() {
+        return Vec::new();
+    }
+
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/tags", endpoint.trim_end_matches('/'));
+    let available = match client.get(&url).send().await {
+        Ok(response) if response.status().is_success() => {
+            match response.json::<OllamaTagsResponse>().await {
+                Ok(tags) => tags
+                    .models
+                    .into_iter()
+                    .flat_map(|model| [Some(model.name), model.model])
+                    .flatten()
+                    .map(|model| model.trim().to_lowercase())
+                    .collect::<Vec<_>>(),
+                Err(_) => return required_models.to_vec(),
+            }
+        }
+        _ => return required_models.to_vec(),
+    };
+
+    required_models
+        .iter()
+        .filter_map(|model| {
+            let model = model.trim().to_lowercase();
+            if model.is_empty() || available.contains(&model) {
+                None
+            } else {
+                Some(model)
+            }
+        })
+        .collect()
 }
 
 fn resolve_ollama_executable() -> Option<PathBuf> {
